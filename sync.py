@@ -145,6 +145,7 @@ def extract_activity(a):
         "calories": a.get("calories"),
         "avg_hr": a.get("averageHR"),
         "max_hr": a.get("maxHR"),
+        "elevation_m": a.get("elevationGain"),
         "raw_json": None,
     }
 
@@ -293,6 +294,7 @@ def seed_demo(conn, days, quiet):
             "calories": 420 + k * 5,
             "avg_hr": 149 + k,
             "max_hr": 168 + k,
+            "elevation_m": 18 + k * 4,
             "raw_json": json.dumps({"demo": True}),
         }, source="demo")
         store.replace_splits(conn, aid, _demo_splits(rnd, base_pace, 4, 148 + k))
@@ -317,6 +319,7 @@ def seed_demo(conn, days, quiet):
             "calories": int(dur / 60 * rnd.uniform(7, 11)),
             "avg_hr": avg_hr,
             "max_hr": avg_hr + rnd.randint(18, 30),
+            "elevation_m": None,
             "raw_json": json.dumps({"demo": True}),
         }, source="demo")
 

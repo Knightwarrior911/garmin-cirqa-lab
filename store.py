@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS activities (
   calories INTEGER,
   avg_hr INTEGER,
   max_hr INTEGER,
+  elevation_m REAL,
   source TEXT NOT NULL DEFAULT 'garmin',
   raw_json TEXT
 );
@@ -151,6 +152,18 @@ def get_activities(conn, limit=20):
 
 def activity_count(conn):
     return conn.execute("SELECT COUNT(*) c FROM activities").fetchone()["c"]
+
+
+def upsert_activity(conn, a, source="garmin"):
+    conn.execute(
+        "INSERT OR REPLACE INTO activities (activity_id, name, type, start_local, start_iso, "
+        "duration_s, distance_m, calories, avg_hr, max_hr, elevation_m, source, raw_json) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (str(a.get("activity_id")), a.get("name"), a.get("type"), a.get("start_local"),
+         a.get("start_iso"), a.get("duration_s"), a.get("distance_m"), a.get("calories"),
+         a.get("avg_hr"), a.get("max_hr"), a.get("elevation_m"), source, a.get("raw_json")),
+    )
+    conn.commit()
 
 
 def replace_splits(conn, activity_id, splits):

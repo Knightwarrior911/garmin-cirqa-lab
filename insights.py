@@ -94,16 +94,55 @@ def build_guidance(conn):
             "reasons": reasons, "confidence": "high" if len(days) >= 14 else "medium"}
 
 
-def rule_aerobic_efficiency(conn):
-    runs = [r for r in store.runs_with_splits(conn, 15) if (r.get("distance_m") or 0) >= 3000]
-    if len(runs) < 4:
+def _elev_m_per_km(a):
+    dist, elev = a.get("distance_m"), a.get("elevation_m")
+    if not dist or elev is None:
         return None
-    sessions = []
-    hrs = []
-    for r in runs:
+    return elev / (dist / 1000.0)
+
+
+def _interval_like(splits):
+    """Alternating fast/slow splits (or one wild outlier) = interval/fartlek session."""
+    paces = [s.get("pace_s_per_km") for s in splits if s.get("pace_s_per_km")]
+    if len(paces) < 3:
+        return False
+    if max(paces) - min(paces) > 75:
+        return True
+    deltas = [paces[i + 1] - paces[i] for i in range(len(paces) - 1)]
+    flips = sum(1 for i in range(len(deltas) - 1) if deltas[i] * deltas[i + 1] < 0)
+    return flips >= len(deltas) - 1 and max(paces) - min(paces) > 40
+
+
+def _run_exclusion(a, splits):
+    """Reason to exclude a run from pace/HR trend analysis, or None if comparable."""
+    if (a.get("type") or "") == "trail_running":
+        return "trail"
+    elev = _elev_m_per_km(a)
+    if elev is not None and elev > 25:
+        return "hilly"
+    if _interval_like(splits):
+        return "intervals"
+    return None
+
+
+def _comparable_runs(conn, limit=15):
+    """Recent runs with splits, split into usable vs excluded-by-context."""
+    usable, excluded = [], []
+    for r in store.runs_with_splits(conn, limit):
+        if (r.get("distance_m") or 0) < 3000:
+            continue
         splits = store.get_splits(conn, r["activity_id"])
         if len(splits) < 3:
             continue
+        reason = _run_exclusion(r, splits)
+        (excluded if reason else usable).append((r, splits, reason))
+    return usable, excluded
+
+
+def rule_aerobic_efficiency(conn):
+    usable, excluded = _comparable_runs(conn)
+    sessions, hrs = [], []
+    for r, splits, _ in usable:
         dist = sum(s["distance_m"] or 0 for s in splits)
         dur = sum(s["duration_s"] or 0 for s in splits)
         hr = _mean([s.get("avg_hr") for s in splits])
@@ -125,30 +164,31 @@ def rule_aerobic_efficiency(conn):
         return None
     pct = (old_pace - new_pace) / old_pace * 100.0
     conf = "high" if len(band) >= 8 else ("medium" if len(band) >= 6 else "low")
+    note = f" ({len(excluded)} hilly/interval/trail runs excluded)" if excluded else ""
     if pct >= 1.5:
         return {"id": "aerobic_efficiency", "severity": "info", "confidence": conf,
-                "title": f"Aerobic efficiency improving: {pct:.1f}% at the same heart rate",
-                "finding": f"Pace at ~{round(med_hr)} bpm moved from {_pace_str(old_pace)} to "
-                           f"{_pace_str(new_pace)} /km across {len(band)} runs.",
-                "action": "Base is responding. Hold weekly volume steady and add one quality session per week; "
-                          "do not raise volume and intensity in the same week."}
+                "title": f"Pace at the same heart rate improving: {pct:.1f}%",
+                "finding": f"On comparable easy runs{note}, pace at ~{round(med_hr)} bpm moved from "
+                           f"{_pace_str(old_pace)} to {_pace_str(new_pace)} /km across {len(band)} runs.",
+                "action": "Consistent with aerobic adaptation - not proof yet. Confirming test: keep the "
+                          "comparison like-for-like (flat routes, similar weather) for 2 more weeks; if it "
+                          "holds, add one quality session per week without raising volume."}
     if pct <= -1.5:
         return {"id": "aerobic_efficiency", "severity": "watch", "confidence": conf,
-                "title": f"Aerobic efficiency declining: {abs(pct):.1f}% slower at the same heart rate",
-                "finding": f"Pace at ~{round(med_hr)} bpm moved from {_pace_str(old_pace)} to "
-                           f"{_pace_str(new_pace)} /km across {len(band)} runs.",
-                "action": "Slower pace at the same HR usually means fatigue, not lost fitness. "
-                          "Check sleep and resting-HR trend; keep everything easy for 5-7 days."}
+                "title": f"Pace at the same heart rate declining: {abs(pct):.1f}%",
+                "finding": f"On comparable easy runs{note}, pace at ~{round(med_hr)} bpm moved from "
+                           f"{_pace_str(old_pace)} to {_pace_str(new_pace)} /km across {len(band)} runs.",
+                "action": "Hypothesis: fatigue, heat, or under-recovery - slower pace at the same HR is a "
+                          "pattern, not a diagnosis. Confirming test: check the HRV/RHR trend and rerun a "
+                          "familiar flat route rested; still slower means keep everything easy for 5-7 days."}
     return None
 
 
+
 def rule_pace_fade(conn):
+    usable, excluded = _comparable_runs(conn)
     fades, worst = [], None
-    runs = store.runs_with_splits(conn, 15)
-    for r in runs:
-        splits = store.get_splits(conn, r["activity_id"])
-        if len(splits) < 3:
-            continue
+    for r, splits, _ in usable:
         first, last = splits[0].get("pace_s_per_km"), splits[-1].get("pace_s_per_km")
         if not first or not last:
             continue
@@ -165,21 +205,22 @@ def rule_pace_fade(conn):
         sev = "watch"
     else:
         return None
+    note = f" Excluded {len(excluded)} hilly/interval/trail runs where fade is expected." if excluded else ""
     return {"id": "pace_fade", "severity": sev,
             "confidence": "high" if len(fades) >= 4 else "low",
-            "title": f"Pace fades {avg:.0f}% across your runs",
-            "finding": f"First-to-last kilometre slowdown averages {avg:.0f}% over {len(fades)} runs "
-                       f"(worst: {worst[0]:.0f}% on \"{worst[1]}\").",
-            "action": "Strength endurance is the limiter. Add sled pushes/pulls, loaded carries, and finish "
-                      "one easy run per week with 3 progressively faster kilometres."}
+            "title": f"Pace fades {avg:.0f}% across your comparable runs",
+            "finding": f"On flat, non-interval runs{note} first-to-last kilometre slowdown averages "
+                       f"{avg:.0f}% over {len(fades)} runs (worst: {worst[0]:.0f}% on \"{worst[1]}\").",
+            "action": "Hypothesis: fast starts, or a strength-endurance gap - split data alone cannot tell. "
+                      "Confirming test: on your next flat easy run, run the first km 10-15 s slower than "
+                      "usual; if fade shrinks, pacing was the cause. If not, add sled work and loaded "
+                      "carries weekly and recheck in 3 weeks."}
 
 
 def rule_hr_drift(conn):
+    usable, excluded = _comparable_runs(conn)
     drifts = []
-    for r in store.runs_with_splits(conn, 15):
-        splits = store.get_splits(conn, r["activity_id"])
-        if len(splits) < 3:
-            continue
+    for r, splits, _ in usable:
         h0, h1 = splits[0].get("avg_hr"), splits[-1].get("avg_hr")
         if not h0 or not h1:
             continue
@@ -189,12 +230,17 @@ def rule_hr_drift(conn):
     avg = _mean(drifts)
     if avg < 8:
         return None
+    note = f" ({len(excluded)} hilly/interval/trail runs excluded)" if excluded else ""
     return {"id": "hr_drift", "severity": "watch",
             "confidence": "high" if len(drifts) >= 4 else "low",
-            "title": f"Heart rate drifts +{avg:.0f} bpm within runs",
-            "finding": f"Split HR rises {avg:.0f} bpm from start to end at steady effort "
-                       f"(mean of {len(drifts)} runs).",
-            "action": "Classic aerobic-endurance signal. Keep ~80% of running genuinely easy and retest in 4 weeks."}
+            "title": f"Heart rate rises +{avg:.0f} bpm within runs",
+            "finding": f"On comparable runs{note}, split HR climbs {avg:.0f} bpm from start to end "
+                       f"(mean of {len(drifts)} runs). Heat, dehydration, and terrain also cause drift.",
+            "action": "Hypothesis: aerobic endurance is the current constraint - unconfirmed. Confirming "
+                      "test: repeat a similar run cool and well-hydrated; drift under ~5 bpm points to "
+                      "conditions, persistent drift says keep ~80% of running genuinely easy for 4 weeks "
+                      "and recheck."}
+
 
 
 def _proxy_load(a):
@@ -224,8 +270,10 @@ def rule_load_balance(conn, activities):
         return {"id": "load_balance", "severity": "action", "confidence": "medium",
                 "title": f"Training spike: load ratio {ratio:.2f}",
                 "finding": f"This week's training load is {ratio:.2f}x your 3-week weekly average.",
-                "action": "Spikes above ~1.3x raise injury risk. Cut volume 20-30% this week or "
-                          "convert one hard session to easy aerobic."}
+                "action": "Note: this load is a duration/intensity proxy, not a measured workload. Rapid "
+                          "ramps are associated with higher injury risk in runner populations - treat the "
+                          "flag as a prompt, not a diagnosis. Test: hold volume flat for a week; if "
+                          "soreness and RPE settle, resume at <=10% weekly increases."}
     if ratio < 0.7:
         return {"id": "load_balance", "severity": "info", "confidence": "medium",
                 "title": f"Load is tapering: ratio {ratio:.2f}",
@@ -283,8 +331,9 @@ def rule_recovery_coupling(conn, activities, log_hard_dates):
                 "title": f"HRV drops {drop:.0f}% the day after hard sessions",
                 "finding": f"Morning HRV averages {round(h)} ms after hard days vs {round(r)} ms after rest days "
                            f"({len(hard_next)} vs {len(rest_next)} mornings).",
-                "action": "Place hard sessions after rest days, keep the day after truly easy, "
-                          "and prioritize sleep on strength days."}
+                "action": "Hypothesis: hard days cost you a recovery day. Confirming test: place your next "
+                          "two hard sessions after rest days and compare morning HRV; if the gap holds, "
+                          "keep that sequencing and prioritize sleep after strength days."}
     return None
 
 

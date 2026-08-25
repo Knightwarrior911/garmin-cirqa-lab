@@ -342,6 +342,7 @@ function renderActs(acts){
         ${a.distance_m ? `<span>${fmtDist(a.distance_m)}</span>` : ""}
         ${pace ? `<span>${pace} /km</span>` : ""}
         ${a.avg_hr ? `<span>avg HR ${a.avg_hr}</span>` : ""}
+        ${a.elevation_m ? `<span>↑ ${Math.round(a.elevation_m)} m</span>` : ""}
         ${a.max_hr ? `<span>max ${a.max_hr}</span>` : ""}
       </div>
       ${splitsHtml}
