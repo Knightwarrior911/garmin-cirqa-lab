@@ -1,11 +1,14 @@
-"""Shared Garmin Connect session helper (garminconnect 0.3.x API).
+"""Shared Garmin Connect session helper (garminconnect 0.3.x native client).
 
 Tokens are stored by the library under ~/.garminconnect on this machine only.
 Credentials are never written to disk or this repository.
 
-Verified against garminconnect 0.3.2: Garmin.login(tokenstore) both loads
-existing tokens AND persists new ones after a fresh login (including the
-interactive MFA prompt). There is no separate dump call in this version.
+Verified against garminconnect 0.3.2:
+- Garmin.login(tokenstore) loads existing tokens AND persists new ones after
+  a fresh login. There is no separate dump call.
+- MFA-protected accounts REQUIRE a prompt_mfa callable; without one the login
+  raises "MFA Required but no prompt_mfa mechanism supplied" (client.py).
+  We wire it to a terminal prompt so the owner can type the code they receive.
 """
 import sys
 from getpass import getpass
@@ -33,10 +36,14 @@ def connect(interactive=True):
             sys.exit("No valid Garmin session. Run:  .venv\\Scripts\\python login.py")
 
     print("Garmin login required (tokens missing or expired).")
-    print("Credentials are used only for this login; only garth tokens are stored.")
+    print("Credentials are used only for this login; only session tokens are stored.")
     email = input("Garmin email: ").strip()
     password = getpass("Garmin password: ")
-    garmin = Garmin(email=email, password=password)
-    garmin.login(str(TOKEN_DIR))  # prompts for the MFA code on the terminal when enabled; persists tokens
+    garmin = Garmin(
+        email=email,
+        password=password,
+        prompt_mfa=lambda: input("Garmin MFA code (sent to your email/authenticator): ").strip(),
+    )
+    garmin.login(str(TOKEN_DIR))
     print(f"Login complete. Tokens saved to {TOKEN_DIR}")
     return garmin

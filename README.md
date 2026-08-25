@@ -50,6 +50,16 @@ Give the repo to any coding agent (Claude Code, Codex, Cursor, ...) and say:
 the one interactive login, verification checklist, and troubleshooting. The only
 human input ever required is the Garmin login in Step 3.
 
+**Access first:** the repo is **private**. Before anyone else can clone it, add them
+as a collaborator — GitHub web: repo → Settings → Collaborators → Add people — or:
+
+```powershell
+gh api repos/Knightwarrior911/garmin-cirqa-lab/collaborators/<THEIR-GITHUB-USERNAME> -X PUT
+```
+
+They accept the invite email, then clone. No GitHub account at all? Send them a zip
+of the repo instead — the setup in AGENTS.md is fully self-contained.
+
 ## Data collected
 
 | Table | Contents |

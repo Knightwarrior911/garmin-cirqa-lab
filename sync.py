@@ -60,16 +60,13 @@ def fetch_day(garmin, d):
     bundle["steps"] = stats.get("totalSteps")
     bundle["calories"] = stats.get("activeKilocalories") or stats.get("calories")
     bundle["resting_hr"] = stats.get("restingHeartRate")
-    if bundle["resting_hr"] is None:
-        rhr = safe(garmin, "get_rhr_day", d)
-        if isinstance(rhr, dict):
-            bundle["resting_hr"] = rhr.get("restingHeartRate")
-
     hrv = safe(garmin, "get_hrv_data", d)
     if isinstance(hrv, dict):
-        base = hrv.get("baseline") or {}
-        bundle["hrv_last_night"] = hrv.get("lastNightAvg")
-        bundle["hrv_weekly_avg"] = hrv.get("weeklyAvg")
+        # Canonical values live in hrvSummary; older responses expose them top-level.
+        summary = hrv.get("hrvSummary") if isinstance(hrv.get("hrvSummary"), dict) else hrv
+        base = summary.get("baseline") or {}
+        bundle["hrv_last_night"] = summary.get("lastNightAvg")
+        bundle["hrv_weekly_avg"] = summary.get("weeklyAvg")
         bundle["hrv_baseline_low"] = base.get("low")
         bundle["hrv_baseline_high"] = base.get("high")
 
@@ -89,8 +86,10 @@ def fetch_day(garmin, d):
     bb = safe(garmin, "get_body_battery", d)
     if isinstance(bb, list) and bb:
         latest = bb[-1] or {}
-        bundle["body_battery_high"] = latest.get("highest") or latest.get("charged")
-        bundle["body_battery_low"] = latest.get("lowest") or latest.get("drained")
+        # highest/lowest are levels; charged/drained are deltas and must not
+        # be stored as levels when the summary fields are absent.
+        bundle["body_battery_high"] = latest.get("highest")
+        bundle["body_battery_low"] = latest.get("lowest")
 
     spo2 = safe(garmin, "get_spo2_data", d)
     bundle["spo2_avg"] = extract_spo2(spo2)
