@@ -84,14 +84,43 @@ def build_guidance(conn):
     if yesterday_hard:
         reasons.append("hard session yesterday")
 
-    if hrv_low or rhr_high:
-        return {"directive": "Recover today", "headline": "Keep it easy: aerobic or mobility only, protect sleep.",
-                "reasons": reasons, "confidence": "medium"}
+    score = 100.0
+    drivers = []
+    if latest.get("hrv_last_night") and hrv_base:
+        dev = (latest["hrv_last_night"] - hrv_base) / hrv_base * 100.0
+        if dev < 0:
+            score -= min(30.0, -dev * 2.5)
+        drivers.append({"label": "HRV", "value": f"{latest['hrv_last_night']} ms",
+                        "detail": f"{dev:+.0f}% vs baseline", "state": "good" if dev >= 0 else "bad"})
+    if latest.get("resting_hr") and rhr_base:
+        d = latest["resting_hr"] - rhr_base
+        if d > 0:
+            score -= min(20.0, d * 4)
+        drivers.append({"label": "RHR", "value": f"{latest['resting_hr']} bpm",
+                        "detail": f"{d:+.0f} vs baseline", "state": "good" if d <= 0 else "bad"})
+    if sleep_last is not None:
+        debt = max(0.0, 8.0 - sleep_last)
+        if debt > 0:
+            score -= min(25.0, debt * 10)
+        drivers.append({"label": "Sleep", "value": f"{sleep_last:.1f} h",
+                        "detail": f"{-debt:.1f} h vs 8 h target" if debt > 0 else "target met",
+                        "state": "good" if debt <= 0.5 else "bad"})
     if yesterday_hard and (sleep_poor or hrv_low):
-        return {"directive": "Steady", "headline": "Quality is fine; keep volume controlled after yesterday's hard work.",
-                "reasons": reasons, "confidence": "medium"}
-    return {"directive": "Green light", "headline": "Recovery is holding. A quality session is a good trade today.",
-            "reasons": reasons, "confidence": "high" if len(days) >= 14 else "medium"}
+        score -= 10
+    score = int(max(5, min(99, round(score))))
+    state = "good" if score >= 67 else "mid" if score >= 34 else "rest"
+
+    if hrv_low or rhr_high:
+        return {"directive": "Recover today", "score": score, "state": state,
+                "headline": "Keep it easy: aerobic or mobility only, protect sleep.",
+                "drivers": drivers, "confidence": "medium"}
+    if yesterday_hard and (sleep_poor or hrv_low):
+        return {"directive": "Steady", "score": score, "state": state,
+                "headline": "Quality is fine; keep volume controlled after yesterday's hard work.",
+                "drivers": drivers, "confidence": "medium"}
+    return {"directive": "Green light", "score": score, "state": state,
+            "headline": "Recovery is holding. A quality session is a good trade today.",
+            "drivers": drivers, "confidence": "high" if len(days) >= 14 else "medium"}
 
 
 def _elev_m_per_km(a):
@@ -254,18 +283,29 @@ def _proxy_load(a):
     return dur_min * factor
 
 
-def rule_load_balance(conn, activities):
+def load_summary(conn, activities):
+    """Acute vs chronic training-load snapshot for the hero card."""
     today = date.today()
-    def window_sum(start_off, end_off):
-        lo, hi = today - timedelta(days=start_off), today - timedelta(days=end_off)
+    def wsum(a_off, b_off):
+        lo, hi = today - timedelta(days=a_off), today - timedelta(days=b_off)
         return sum(_proxy_load(a) for a in activities
                    if (_ad := _activity_date(a)) and lo.isoformat() <= _ad <= hi.isoformat())
-    acute = window_sum(6, 0)
-    chronic_weeks = [window_sum(13, 7), window_sum(20, 14), window_sum(27, 21)]
-    chronic = _mean(chronic_weeks)
+    acute = wsum(6, 0)
+    chronic = _mean([wsum(13, 7), wsum(20, 14), wsum(27, 21)])
+    week_lo = (today - timedelta(days=6)).isoformat()
+    return {"acute": round(acute or 0),
+            "chronic_weekly": round(chronic) if chronic else None,
+            "ratio": round(acute / chronic, 2) if acute and chronic else None,
+            "sessions_7d": len([a for a in activities
+                                if (_ad := _activity_date(a)) and _ad >= week_lo])}
+
+
+def rule_load_balance(conn, activities):
+    s = load_summary(conn, activities)
+    acute, chronic = s["acute"], s["chronic_weekly"]
     if not acute or not chronic:
         return None
-    ratio = acute / chronic
+    ratio = s["ratio"]
     if ratio > 1.3:
         return {"id": "load_balance", "severity": "action", "confidence": "medium",
                 "title": f"Training spike: load ratio {ratio:.2f}",
@@ -512,5 +552,5 @@ def generate(conn):
     ]
     insights = [i for i in insights if i]
     insights.sort(key=lambda i: (SEVERITY_ORDER[i["severity"]], i["id"]))
-    return {"guidance": build_guidance(conn), "insights": insights[:8],
+    return {"guidance": build_guidance(conn), "insights": insights[:8], "load": load_summary(conn, activities),
             "data_days": len(days), "generated_at": store.now_iso()}

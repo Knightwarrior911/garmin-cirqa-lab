@@ -35,32 +35,43 @@
   h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
     font-family:var(--mono);font-weight:500;margin:0 0 10px}
 
-  .guidance{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
-    border:1px solid var(--line2);border-radius:14px;background:linear-gradient(120deg,rgba(201,243,107,.08),rgba(255,255,255,.02));
-    padding:18px 20px}
-  .directive{font-size:30px;font-weight:800;letter-spacing:-.05em;line-height:1}
-  .directive.ok{color:var(--lime)} .directive.mid{color:var(--amber)} .directive.rest{color:var(--cyan)}
-  .g-copy .headline{font-size:14px;font-weight:600}
-  .reasons{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
-  .reason{font:10px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 7px}
-  .g-conf{margin-top:9px;font:10px var(--mono);color:var(--dim)}
+  .heroes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .hero-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px 18px;
+    border-top:2px solid var(--hc,#5a6152)}
+  .hero-card.state-good{--hc:var(--lime)} .hero-card.state-mid{--hc:var(--amber)} .hero-card.state-rest{--hc:var(--cyan)}
+  .hc-head{display:flex;justify-content:space-between;align-items:baseline;
+    font:9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .hc-head b{color:var(--hc,var(--muted));font-weight:500;letter-spacing:.06em}
+  .hc-main{display:flex;align-items:center;gap:16px;margin-top:12px}
+  .ring{--p:0;width:84px;height:84px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    background:conic-gradient(var(--hc,var(--lime)) calc(var(--p)*1%),rgba(255,255,255,.07) 0)}
+  .ring i{width:66px;height:66px;border-radius:50%;background:var(--panel);display:grid;place-items:center;
+    font-style:normal;font-size:21px;font-weight:800;letter-spacing:-.05em}
+  .ring i small{font-size:10px;color:var(--dim);font-weight:400;margin-left:1px}
+  .hc-side{min-width:0}
+  .hc-dir{font-size:17px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+  .hc-sub{color:var(--muted);font-size:11px;margin-top:4px;line-height:1.4}
+  .hc-stats{margin-top:12px;border-top:1px solid var(--line);padding-top:9px;display:grid;gap:5px}
+  .hc-stat{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:baseline;font-size:11px}
+  .hc-stat span{font:9px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .hc-stat b{font-weight:600;color:var(--text)}
+  .hc-stat i{font:9px var(--mono);font-style:normal;color:var(--dim)}
+  .hc-stat i.bad{color:var(--amber)} .hc-stat i.good{color:var(--lime)}
 
-  .insights{display:grid;gap:10px}
-  .insight{display:grid;grid-template-columns:4px 1fr;gap:0;border:1px solid var(--line);border-radius:12px;
-    background:var(--panel);overflow:hidden}
-  .insight .bar{background:var(--dim)}
-  .insight.action .bar{background:var(--red)} .insight.watch .bar{background:var(--amber)} .insight.info .bar{background:var(--cyan)}
-  .insight .body{padding:13px 16px}
-  .insight h3{margin:0;font-size:13.5px;letter-spacing:-.02em}
-  .insight h3 .sev{font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;border-radius:4px;
-    padding:2px 6px;margin-left:8px;vertical-align:2px}
-  .insight.action h3 .sev{color:var(--red);border:1px solid rgba(242,123,108,.4)}
-  .insight.watch h3 .sev{color:var(--amber);border:1px solid rgba(240,184,107,.4)}
-  .insight.info h3 .sev{color:var(--cyan);border:1px solid rgba(125,224,207,.4)}
-  .insight .finding{color:var(--muted);font-size:12px;margin:6px 0 0}
-  .insight .do{margin:8px 0 0;font-size:12.5px}
-  .insight .do b{color:var(--lime);font-weight:600}
-  .insight .conf{margin-top:8px;font:9px var(--mono);color:var(--dim)}
+  .insights{display:grid;gap:6px}
+  .ins{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+  .ins summary{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;
+    padding:10px 14px;cursor:pointer;list-style:none;font-size:12.5px}
+  .ins summary::-webkit-details-marker{display:none}
+  .ins summary:hover{background:rgba(255,255,255,.03)}
+  .ins .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+  .ins.action .dot{background:var(--red)} .ins.watch .dot{background:var(--amber)} .ins.info .dot{background:var(--cyan)}
+  .ins summary .sev{font:9px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+  .ins .ins-body{padding:2px 14px 12px 32px;border-top:1px solid var(--line)}
+  .ins .finding{color:var(--muted);font-size:12px;margin:9px 0 0}
+  .ins .do{margin:7px 0 0;font-size:12px}
+  .ins .do b{color:var(--lime);font-weight:600}
+  .ins .conf{margin-top:7px;font:9px var(--mono);color:var(--dim)}
 
   .signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
   .signal{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:13px 14px}
@@ -132,9 +143,8 @@
   .cov{display:flex;gap:10px;flex-wrap:wrap}
   .cov span b{color:var(--muted)}
 
+  @media(max-width:900px){ .heroes{grid-template-columns:1fr} .hc-main{gap:12px} }
   @media(max-width:760px){
-    .guidance{grid-template-columns:1fr}
-    .directive{font-size:24px}
     .chartbox{height:220px}
   }
 </style>
@@ -153,18 +163,18 @@
   </div>
 
   <section>
-    <h2>Today's guidance</h2>
-    <div class="guidance" id="guidance"></div>
+    <h2>Today</h2>
+    <div class="heroes" id="heroes"></div>
   </section>
 
   <section>
-    <h2>Insights &amp; recommended actions</h2>
-    <div class="insights" id="insights"></div>
-  </section>
-
-  <section>
-    <h2>Recovery signals</h2>
+    <h2>Also tracking</h2>
     <div class="signals" id="signals"></div>
+  </section>
+
+  <section>
+    <h2>Insights <span style="color:var(--dim);text-transform:none;letter-spacing:0">— click a row for the detail and the confirming test</span></h2>
+    <div class="insights" id="insights"></div>
   </section>
 
   <section>
@@ -270,15 +280,66 @@ function statusChips(ov){
   add(`log <b>${ov.log_entries}</b>`);
 }
 
-function renderGuidance(g){
-  const cls = /green/i.test(g.directive) ? "ok" : /steady/i.test(g.directive) ? "mid" : "rest";
-  $("guidance").innerHTML = `
-    <div class="directive ${cls}">${g.directive}</div>
-    <div class="g-copy">
-      <div class="headline">${g.headline}</div>
-      <div class="reasons">${(g.reasons||[]).map(r=>`<span class="reason">${r}</span>`).join("") || ""}</div>
-      <div class="g-conf">confidence: ${g.confidence} · recomputed locally from your data on every load</div>
-    </div>`;
+function renderHeroes(g, load, ov, days){
+  const el = $("heroes");
+  const latest = ov.latest;
+  if (!latest){
+    el.innerHTML = `<div class="empty" style="grid-column:1/-1">No data yet — run <code>.venv\\Scripts\\python sync.py</code> (or <code>--demo</code> to preview)</div>`;
+    return;
+  }
+  const st = g.state || "mid";
+  const ring = (pct, inner) => `<div class="ring" style="--p:${Math.max(2, Math.min(100, pct))}"><i>${inner}</i></div>`;
+
+  // Recovery card
+  const drv = (g.drivers || []).map(d =>
+    `<div class="hc-stat"><span>${d.label}</span><b>${d.value}</b><i class="${d.state}">${d.detail}</i></div>`).join("");
+  const recovery = `<article class="hero-card state-${st}">
+    <div class="hc-head">Recovery <b>${g.directive}</b></div>
+    <div class="hc-main">${ring(g.score, `${g.score}`)}
+      <div class="hc-side"><div class="hc-dir">${g.headline.split(".")[0]}.</div>
+      <div class="hc-sub">vs your 28-day baseline · confidence ${g.confidence}</div></div>
+    </div>
+    <div class="hc-stats">${drv || `<div class="hc-stat"><span>—</span><b>collecting baseline</b><i></i></div>`}</div>
+  </article>`;
+
+  // Sleep card
+  const sh = latest.sleep_hours, ss = latest.sleep_score;
+  const deepMin = latest.sleep_deep_s != null ? Math.round(latest.sleep_deep_s / 60) : null;
+  const remMin = latest.sleep_rem_s != null ? Math.round(latest.sleep_rem_s / 60) : null;
+  const sleepPct = sh ? Math.min(100, Math.round(sh / 8 * 100)) : 0;
+  const sleepState = sh == null ? "mid" : sh >= 7 ? "good" : sh >= 6 ? "mid" : "rest";
+  const sleep = `<article class="hero-card state-${sleepState}">
+    <div class="hc-head">Last night's sleep <b>${sh != null ? (sh >= 7 ? "on target" : "short") : "no data"}</b></div>
+    <div class="hc-main">${ring(sleepPct, `${sh != null ? sh.toFixed(1) : "—"}<small>h</small>`)}
+      <div class="hc-side"><div class="hc-dir">${sh != null ? `${Math.round((8 - sh) * 60)} min vs 8 h target` : "sync to populate"}</div>
+      <div class="hc-sub">${ss != null ? `sleep score ${ss}` : ""}</div></div>
+    </div>
+    <div class="hc-stats">
+      <div class="hc-stat"><span>Deep</span><b>${deepMin != null ? deepMin + " min" : "—"}</b><i></i></div>
+      <div class="hc-stat"><span>REM</span><b>${remMin != null ? remMin + " min" : "—"}</b><i></i></div>
+      <div class="hc-stat"><span>Score</span><b>${ss != null ? ss : "—"}</b><i>/ 100</i></div>
+    </div>
+  </article>`;
+
+  // Load card
+  const ratio = load && load.ratio;
+  const loadState = ratio == null ? "mid" : ratio > 1.3 ? "rest" : ratio < 0.7 ? "mid" : "good";
+  const loadPct = ratio != null ? Math.min(100, Math.round(ratio / 2 * 100)) : 0;
+  const loadTxt = ratio == null ? "collecting" : ratio > 1.3 ? "spiking" : ratio < 0.7 ? "tapering" : "balanced";
+  const loadCard = `<article class="hero-card state-${loadState}">
+    <div class="hc-head">Training load <b>${loadTxt}</b></div>
+    <div class="hc-main">${ring(loadPct, ratio != null ? `${Math.round(ratio * 100)}<small>%</small>` : "—")}
+      <div class="hc-side"><div class="hc-dir">${ratio != null ? `${ratio.toFixed(2)}× your 3-week norm` : "need ~3 weeks"}</div>
+      <div class="hc-sub">this week vs prior 3-week average</div></div>
+    </div>
+    <div class="hc-stats">
+      <div class="hc-stat"><span>Sessions</span><b>${load ? load.sessions_7d : "—"}<small style="color:var(--dim)"> / 7d</small></b><i></i></div>
+      <div class="hc-stat"><span>This week</span><b>${load ? load.acute : "—"}</b><i>load units</i></div>
+      <div class="hc-stat"><span>Norm</span><b>${load && load.chronic_weekly ? load.chronic_weekly : "—"}</b><i>weekly</i></div>
+    </div>
+  </article>`;
+
+  el.innerHTML = recovery + sleep + loadCard;
 }
 
 function renderInsights(list){
@@ -289,15 +350,14 @@ function renderInsights(list){
     return;
   }
   el.innerHTML = list.map(i => `
-    <article class="insight ${i.severity}">
-      <div class="bar"></div>
-      <div class="body">
-        <h3>${i.title}<span class="sev">${i.severity}</span></h3>
+    <details class="ins ${i.severity}">
+      <summary><i class="dot"></i><span>${i.title}</span><span class="sev">${i.severity}</span></summary>
+      <div class="ins-body">
         <p class="finding">${i.finding}</p>
-        <p class="do"><b>Do this:</b> ${i.action}</p>
+        <p class="do"><b>Next:</b> ${i.action}</p>
         <div class="conf">confidence: ${i.confidence}</div>
       </div>
-    </article>`).join("");
+    </details>`).join("");
 }
 
 function renderSignals(ov, days){
@@ -312,10 +372,10 @@ function renderSignals(ov, days){
     if (v != null && p.length >= 3){
       const pm = mean(p);
       const diff = v - pm;
-      if (Math.abs(diff) > (unit === "bpm" ? 1 : unit === "%" ? 0.5 : unit === "ms" ? 2 : 400)){
+      if (Math.abs(diff) > (unit === "bpm" ? 1 : unit === "%" ? 0.5 : 400)){
         const good = lowerBetter ? diff < 0 : diff > 0;
         cls = good ? "up" : "down";
-        delta = `${diff > 0 ? "+" : ""}${unit === "ms" ? Math.round(diff) : diff.toFixed(1)}${unit} vs 7d`;
+        delta = `${diff > 0 ? "+" : ""}${Math.abs(diff) >= 100 ? (diff/1000).toFixed(1)+"k" : diff.toFixed(1)}${unit} vs 7d`;
       } else delta = `~ 7d avg`;
     }
     return `<div class="signal"><div class="k">${label}</div>
@@ -323,13 +383,10 @@ function renderSignals(ov, days){
       <div class="d ${cls}">${delta}</div></div>`;
   };
   el.innerHTML =
-    card("sleep_hours", "Sleep", (v)=>v.toFixed(1), "h", false) +
-    card("hrv_last_night", "HRV", (v)=>Math.round(v), "ms", false) +
-    card("resting_hr", "Resting HR", (v)=>Math.round(v), "bpm", true) +
-    card("body_battery_high", "Body Battery", (v)=>Math.round(v), "", false) +
     card("stress_avg", "Stress", (v)=>Math.round(v), "", true) +
     card("spo2_avg", "SpO2", (v)=>v.toFixed(1), "%", true) +
-    card("steps", "Steps", (v)=>v >= 10000 ? (v/1000).toFixed(1)+"k" : Math.round(v), "", false);
+    card("steps", "Steps", (v)=>v >= 10000 ? (v/1000).toFixed(1)+"k" : Math.round(v), "", false) +
+    card("training_readiness", "Readiness", (v)=>Math.round(v), "", false);
 }
 
 function renderActs(acts){
@@ -638,7 +695,7 @@ async function refresh(){
   days90 = daysR.days;
   statusChips(ov);
   $("demoBanner").style.display = ov.demo ? "block" : "none";
-  renderGuidance(insR.guidance);
+  renderHeroes(insR.guidance, insR.load, ov, days90);
   renderInsights(insR.insights);
   renderSignals(ov, days90);
   renderActs(actsR.activities);
