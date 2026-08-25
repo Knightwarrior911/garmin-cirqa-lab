@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CIRQA Performance Lab</title>
+<style>
+  :root{
+    --bg:#0f110d; --panel:#161912; --panel2:#1c2016; --line:rgba(238,242,222,.09); --line2:rgba(238,242,222,.17);
+    --text:#eef2de; --muted:#9aa28c; --dim:#6b7360; --lime:#c9f36b; --amber:#f0b86b; --red:#f27b6c; --cyan:#7de0cf;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 "Manrope","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--lime)}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 22px 60px}
+  .mono{font-family:var(--mono)}
+
+  header{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.03em;font-size:16px}
+  .brand i{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime)}
+  .brand small{color:var(--dim);font:10px var(--mono);font-weight:400;letter-spacing:.08em}
+  .status{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip{border:1px solid var(--line);border-radius:99px;padding:4px 10px;font:10px var(--mono);color:var(--muted)}
+  .chip b{color:var(--text);font-weight:500}
+  .chip.demo{border-color:rgba(240,184,107,.4);color:var(--amber)}
+  .chip.err{border-color:rgba(242,123,108,.4);color:var(--red)}
+
+  .banner{display:none;border:1px solid rgba(240,184,107,.35);background:rgba(240,184,107,.07);
+    border-radius:10px;padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:14px}
+  .banner code{font:11px var(--mono);color:var(--text)}
+
+  section{margin-bottom:22px}
+  h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+    font-family:var(--mono);font-weight:500;margin:0 0 10px}
+
+  .guidance{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
+    border:1px solid var(--line2);border-radius:14px;background:linear-gradient(120deg,rgba(201,243,107,.08),rgba(255,255,255,.02));
+    padding:18px 20px}
+  .directive{font-size:30px;font-weight:800;letter-spacing:-.05em;line-height:1}
+  .directive.ok{color:var(--lime)} .directive.mid{color:var(--amber)} .directive.rest{color:var(--cyan)}
+  .g-copy .headline{font-size:14px;font-weight:600}
+  .reasons{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .reason{font:10px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+  .g-conf{margin-top:9px;font:10px var(--mono);color:var(--dim)}
+
+  .insights{display:grid;gap:10px}
+  .insight{display:grid;grid-template-columns:4px 1fr;gap:0;border:1px solid var(--line);border-radius:12px;
+    background:var(--panel);overflow:hidden}
+  .insight .bar{background:var(--dim)}
+  .insight.action .bar{background:var(--red)} .insight.watch .bar{background:var(--amber)} .insight.info .bar{background:var(--cyan)}
+  .insight .body{padding:13px 16px}
+  .insight h3{margin:0;font-size:13.5px;letter-spacing:-.02em}
+  .insight h3 .sev{font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;border-radius:4px;
+    padding:2px 6px;margin-left:8px;vertical-align:2px}
+  .insight.action h3 .sev{color:var(--red);border:1px solid rgba(242,123,108,.4)}
+  .insight.watch h3 .sev{color:var(--amber);border:1px solid rgba(240,184,107,.4)}
+  .insight.info h3 .sev{color:var(--cyan);border:1px solid rgba(125,224,207,.4)}
+  .insight .finding{color:var(--muted);font-size:12px;margin:6px 0 0}
+  .insight .do{margin:8px 0 0;font-size:12.5px}
+  .insight .do b{color:var(--lime);font-weight:600}
+  .insight .conf{margin-top:8px;font:9px var(--mono);color:var(--dim)}
+
+  .signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .signal{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:13px 14px}
+  .signal .k{font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .signal .v{font-size:23px;font-weight:800;letter-spacing:-.05em;margin-top:8px}
+  .signal .v small{font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0}
+  .signal .d{font:10px var(--mono);margin-top:5px}
+  .signal .d.up{color:var(--lime)} .signal .d.down{color:var(--amber)} .signal .d.flat{color:var(--dim)}
+
+  .panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:14px 16px;border-bottom:1px solid var(--line)}
+  .panel-head h3{margin:0;font-size:13px;letter-spacing:-.02em}
+  .seg{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:8px;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--muted);font:10px var(--mono);
+    padding:5px 9px;border-radius:6px;cursor:pointer}
+  .seg button.on{background:var(--lime);color:#1c2412;font-weight:600}
+  .chartbox{position:relative;height:280px;padding:10px 12px}
+  canvas{width:100%;height:100%;display:block}
+  .tooltip{position:absolute;pointer-events:none;display:none;background:#0c0e09;border:1px solid var(--line2);
+    border-radius:8px;padding:7px 10px;font:10px var(--mono);color:var(--text);z-index:5;white-space:nowrap}
+  .tooltip b{color:var(--lime)}
+
+  .acts{display:grid;gap:8px;padding:12px 14px}
+  .act{border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--panel2)}
+  .act .row1{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+  .act .nm{font-weight:700;font-size:13px}
+  .act .meta{font:10px var(--mono);color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
+  .act .fade{font:10px var(--mono);border-radius:5px;padding:2px 7px}
+  .fade.lo{color:var(--lime);border:1px solid rgba(201,243,107,.3)}
+  .fade.mid{color:var(--amber);border:1px solid rgba(240,184,107,.35)}
+  .fade.hi{color:var(--red);border:1px solid rgba(242,123,108,.4)}
+  .splits{display:flex;gap:4px;align-items:flex-end;height:34px;margin-top:9px}
+  .splits i{flex:1;border-radius:3px 3px 0 0;background:var(--lime);opacity:.85;min-width:14px;position:relative}
+  .splits i.slow{background:var(--amber)} .splits i.slowest{background:var(--red)}
+  .splits-lab{display:flex;justify-content:space-between;font:9px var(--mono);color:var(--dim);margin-top:4px}
+
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{font:9px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
+    text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.045);color:var(--muted)}
+  td:first-child{color:var(--text);font-weight:600}
+  .scroll{max-height:320px;overflow:auto}
+
+  .logform{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .logform input,.logform select{width:100%;background:#101308;border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:8px 9px;font-size:12px;outline:0}
+  .logform input:focus,.logform select:focus{border-color:var(--lime)}
+  .logform label{display:block;font:9px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+  .logform .wide{grid-column:span 2}
+  .logform button{background:var(--lime);border:0;border-radius:8px;color:#1c2412;font-weight:700;
+    font-size:12px;padding:8px 14px;cursor:pointer;align-self:end}
+  .logform button:hover{filter:brightness(1.08)}
+  .formmsg{font:10px var(--mono);align-self:end;padding-bottom:8px}
+  .formmsg.ok{color:var(--lime)} .formmsg.err{color:var(--red)}
+
+  .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+  .empty code{font:12px var(--mono);color:var(--lime)}
+  footer{border-top:1px solid var(--line);margin-top:26px;padding-top:14px;display:flex;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;font:10px var(--mono);color:var(--dim)}
+  .cov{display:flex;gap:10px;flex-wrap:wrap}
+  .cov span b{color:var(--muted)}
+
+  @media(max-width:760px){
+    .guidance{grid-template-columns:1fr}
+    .directive{font-size:24px}
+    .chartbox{height:220px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><i></i> CIRQA Performance Lab <small>LOCAL · PRIVATE</small></div>
+    <div class="status" id="status"></div>
+  </header>
+
+  <div class="banner" id="demoBanner">
+    Demo data is loaded (synthetic). A real sync replaces it automatically:
+    <code>.venv\Scripts\python sync.py</code> &nbsp;or clear it now:
+    <code>.venv\Scripts\python sync.py --clear-demo</code>
+  </div>
+
+  <section>
+    <h2>Today's guidance</h2>
+    <div class="guidance" id="guidance"></div>
+  </section>
+
+  <section>
+    <h2>Insights &amp; recommended actions</h2>
+    <div class="insights" id="insights"></div>
+  </section>
+
+  <section>
+    <h2>Recovery signals</h2>
+    <div class="signals" id="signals"></div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Trends</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="seg" id="metricSeg"></div>
+          <div class="seg" id="rangeSeg"></div>
+        </div>
+      </div>
+      <div class="chartbox"><canvas id="chart"></canvas><div class="tooltip" id="tip"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <div class="panel-head"><h3>Activities <span style="color:var(--dim);font-weight:400;font-size:11px">— per-run split analysis</span></h3></div>
+      <div class="acts" id="acts"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Training log <span style="color:var(--dim);font-weight:400;font-size:11px">— the layer CIRQA cannot see</span></h3>
+        <a href="/api/log.csv" style="font:10px var(--mono)">export CSV</a>
+      </div>
+      <form class="logform" id="logForm">
+        <div><label>Date</label><input type="date" name="date" required></div>
+        <div><label>Session</label>
+          <select name="session"><option value="strength">strength</option><option value="run">run</option>
+          <option value="hiit">hiit / hyrox</option><option value="easy">easy aerobic</option><option value="other">other</option></select></div>
+        <div class="wide"><label>Exercise / session name</label><input name="exercise" placeholder="Front squat 4x6"></div>
+        <div><label>Sets</label><input name="sets" type="number" min="0" max="50"></div>
+        <div><label>Reps</label><input name="reps" type="number" min="0" max="500"></div>
+        <div><label>Load kg</label><input name="load_kg" type="number" step="0.5" min="0"></div>
+        <div><label>RPE 0-10</label><input name="rpe" type="number" step="0.5" min="0" max="10"></div>
+        <div><label>Soreness 0-10</label><input name="soreness" type="number" min="0" max="10"></div>
+        <div class="wide"><label>Notes</label><input name="notes" placeholder="how it felt"></div>
+        <button type="submit">Add entry</button>
+        <div class="formmsg" id="formMsg"></div>
+      </form>
+      <div class="scroll"><table id="logTable"><thead>
+        <tr><th>Date</th><th>Session</th><th>Exercise</th><th>Sets x Reps</th><th>Load</th><th>RPE</th><th>Soreness</th><th>Notes</th></tr>
+      </thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="cov" id="cov"></div>
+    <div>sync: <code>.venv\Scripts\python sync.py</code> · insights recompute on every load</div>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const fmtPace = (spk) => { if (!spk) return "?"; const m = Math.floor(spk/60), s = Math.round(spk%60); return `${m}:${String(s).padStart(2,"0")}`; };
+const fmtDur = (s) => { if (!s) return "?"; const h = Math.floor(s/3600), m = Math.round((s%3600)/60); return h ? `${h}:${String(m).padStart(2,"0")}h` : `${m}m`; };
+const fmtDist = (m) => !m ? "—" : (m >= 950 ? (m/1000).toFixed(2) + " km" : Math.round(m) + " m");
+const fmtDate = (iso) => iso ? iso.slice(0,10) : "—";
+const mean = (a) => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+
+const METRICS = [
+  {key:"hrv_last_night", label:"HRV", unit:"ms", color:"#c9f36b"},
+  {key:"resting_hr", label:"RHR", unit:"bpm", color:"#f0b86b"},
+  {key:"sleep_hours", label:"Sleep", unit:"h", color:"#7de0cf"},
+  {key:"stress_avg", label:"Stress", unit:"", color:"#f27b6c"},
+  {key:"body_battery_high", label:"Body Battery", unit:"", color:"#c9f36b"},
+  {key:"spo2_avg", label:"SpO2", unit:"%", color:"#7de0cf"},
+  {key:"steps", label:"Steps", unit:"", color:"#c9f36b"},
+  {key:"training_readiness", label:"Readiness", unit:"", color:"#c9f36b"},
+];
+const RANGES = [{label:"7D", n:7},{label:"28D", n:28},{label:"90D", n:90}];
+let days90 = [], metric = METRICS[0], rangeN = 28;
+
+async function jget(url){ const r = await fetch(url); return r.json(); }
+
+function statusChips(ov){
+  const el = $("status"); el.innerHTML = "";
+  const add = (html, cls) => { const s = document.createElement("span"); s.className = "chip" + (cls ? " " + cls : ""); s.innerHTML = html; el.appendChild(s); };
+  if (ov.demo) add("DEMO DATA", "demo");
+  add(`days <b>${ov.days}</b>`);
+  if (ov.last_day) add(`range <b>${ov.first_day} → ${ov.last_day}</b>`);
+  add(`last sync <b>${ov.last_sync ? ov.last_sync.finished_at.slice(0,16).replace("T"," ") : "never"}</b>`);
+  add(`activities <b>${ov.activities}</b>`);
+  add(`log <b>${ov.log_entries}</b>`);
+}
+
+function renderGuidance(g){
+  const cls = /green/i.test(g.directive) ? "ok" : /steady/i.test(g.directive) ? "mid" : "rest";
+  $("guidance").innerHTML = `
+    <div class="directive ${cls}">${g.directive}</div>
+    <div class="g-copy">
+      <div class="headline">${g.headline}</div>
+      <div class="reasons">${(g.reasons||[]).map(r=>`<span class="reason">${r}</span>`).join("") || ""}</div>
+      <div class="g-conf">confidence: ${g.confidence} · recomputed locally from your data on every load</div>
+    </div>`;
+}
+
+function renderInsights(list){
+  const el = $("insights");
+  if (!list.length){
+    el.innerHTML = `<div class="empty">Not enough data for insights yet (need ~7+ days and a few activities).
+      Sync daily and log gym sessions — rules fire automatically.<br><code>.venv\\Scripts\\python sync.py</code></div>`;
+    return;
+  }
+  el.innerHTML = list.map(i => `
+    <article class="insight ${i.severity}">
+      <div class="bar"></div>
+      <div class="body">
+        <h3>${i.title}<span class="sev">${i.severity}</span></h3>
+        <p class="finding">${i.finding}</p>
+        <p class="do"><b>Do this:</b> ${i.action}</p>
+        <div class="conf">confidence: ${i.confidence}</div>
+      </div>
+    </article>`).join("");
+}
+
+function renderSignals(ov, days){
+  const el = $("signals");
+  const latest = ov.latest;
+  if (!latest){ el.innerHTML = `<div class="empty">No days stored yet — run <code>.venv\\Scripts\\python sync.py</code></div>`; return; }
+  const prev = days.slice(0, -1).slice(-7);
+  const card = (k, label, fmt, unit, lowerBetter) => {
+    const v = latest[k];
+    const p = prev.map(d => d[k]).filter(x => x !== null && x !== undefined);
+    let delta = "", cls = "flat";
+    if (v != null && p.length >= 3){
+      const pm = mean(p);
+      const diff = v - pm;
+      if (Math.abs(diff) > (unit === "bpm" ? 1 : unit === "%" ? 0.5 : unit === "ms" ? 2 : 400)){
+        const good = lowerBetter ? diff < 0 : diff > 0;
+        cls = good ? "up" : "down";
+        delta = `${diff > 0 ? "+" : ""}${unit === "ms" ? Math.round(diff) : diff.toFixed(1)}${unit} vs 7d`;
+      } else delta = `~ 7d avg`;
+    }
+    return `<div class="signal"><div class="k">${label}</div>
+      <div class="v">${v != null ? fmt(v) : "—"} ${unit && v != null ? `<small>${unit}</small>` : ""}</div>
+      <div class="d ${cls}">${delta}</div></div>`;
+  };
+  el.innerHTML =
+    card("sleep_hours", "Sleep", (v)=>v.toFixed(1), "h", false) +
+    card("hrv_last_night", "HRV", (v)=>Math.round(v), "ms", false) +
+    card("resting_hr", "Resting HR", (v)=>Math.round(v), "bpm", true) +
+    card("body_battery_high", "Body Battery", (v)=>Math.round(v), "", false) +
+    card("stress_avg", "Stress", (v)=>Math.round(v), "", true) +
+    card("spo2_avg", "SpO2", (v)=>v.toFixed(1), "%", true) +
+    card("steps", "Steps", (v)=>v >= 10000 ? (v/1000).toFixed(1)+"k" : Math.round(v), "", false);
+}
+
+function renderActs(acts){
+  const el = $("acts");
+  if (!acts.length){ el.innerHTML = `<div class="empty">No activities yet. They appear after your first sync (runs get per-km split analysis).</div>`; return; }
+  el.innerHTML = acts.map(a => {
+    const pace = a.distance_m && a.duration_s ? fmtPace(a.duration_s / a.distance_m * 1000) : null;
+    let fadeHtml = "", splitsHtml = "";
+    if (a.splits && a.splits.length >= 3){
+      const ps = a.splits.map(s => s.pace_s_per_km).filter(Boolean);
+      const fade = ps.length >= 2 ? (ps[ps.length-1] - ps[0]) / ps[0] * 100 : null;
+      if (fade !== null){
+        const cls = fade > 6 ? "hi" : fade > 3 ? "mid" : "lo";
+        fadeHtml = `<span class="fade ${cls}">fade ${fade > 0 ? "+" : ""}${fade.toFixed(1)}%</span>`;
+      }
+      const maxP = Math.max(...ps), minP = Math.min(...ps);
+      splitsHtml = `<div class="splits">` + a.splits.map(s => {
+        const rel = maxP === minP ? 0.7 : 0.25 + 0.75 * (s.pace_s_per_km - minP) / (maxP - minP);
+        const c = rel > 0.85 ? "slowest" : rel > 0.6 ? "slow" : "";
+        const h = Math.round(14 + (1 - rel) * 18);
+        return `<i class="${c}" style="height:${h}px" title="${fmtPace(s.pace_s_per_km)} /km @ ${s.avg_hr || "?"} bpm"></i>`;
+      }).join("") + `</div>
+      <div class="splits-lab"><span>km 1 · ${fmtPace(ps[0])}</span><span>HR ${a.splits[0].avg_hr || "?"} → ${a.splits[a.splits.length-1].avg_hr || "?"} bpm</span><span>km ${ps.length} · ${fmtPace(ps[ps.length-1])}</span></div>`;
+    }
+    return `<div class="act">
+      <div class="row1">
+        <span class="nm">${a.name || a.type || "Activity"}</span>
+        <span style="display:flex;gap:8px;align-items:center">${fadeHtml}<span class="mono" style="font:10px var(--mono);color:var(--dim)">${fmtDate(a.start_iso || a.start_local)}</span></span>
+      </div>
+      <div class="meta">
+        <span>${a.type || ""}</span>
+        ${a.duration_s ? `<span>${fmtDur(a.duration_s)}</span>` : ""}
+        ${a.distance_m ? `<span>${fmtDist(a.distance_m)}</span>` : ""}
+        ${pace ? `<span>${pace} /km</span>` : ""}
+        ${a.avg_hr ? `<span>avg HR ${a.avg_hr}</span>` : ""}
+        ${a.max_hr ? `<span>max ${a.max_hr}</span>` : ""}
+      </div>
+      ${splitsHtml}
+    </div>`;
+  }).join("");
+}
+
+function renderLog(entries){
+  const tb = $("logTable").querySelector("tbody");
+  if (!entries.length){ tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px">No entries yet — log strength work below so recovery-coupling insights can use it.</td></tr>`; return; }
+  tb.innerHTML = entries.map(e => `<tr>
+    <td>${e.date}</td><td>${e.session || ""}</td><td>${e.exercise || ""}</td>
+    <td>${e.sets || "?"} x ${e.reps || "?"}</td><td>${e.load_kg != null ? e.load_kg + " kg" : "—"}</td>
+    <td>${e.rpe != null ? e.rpe : "—"}</td><td>${e.soreness != null ? e.soreness : "—"}</td>
+    <td>${e.notes || ""}</td></tr>`).join("");
+}
+
+function renderCoverage(cov){
+  const items = [["HRV","hrv"],["RHR","resting_hr"],["Sleep","sleep"],["Stress","stress"],["BodyBattery","body_battery"],["SpO2","spo2"],["Readiness","readiness"]];
+  $("cov").innerHTML = items.map(([l,k]) => `<span>${l} <b>${cov[k] ?? 0}</b>/90d</span>`).join("");
+}
+
+function drawChart(){
+  const cv = $("chart"), tip = $("tip");
+  const data = days90.slice(-rangeN).map(d => ({date: d.date, v: d[metric.key]})).filter(x => x.v !== null && x.v !== undefined);
+  const box = cv.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = box.width * dpr; cv.height = box.height * dpr;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+  const w = box.width, h = box.height, pad = {l: 40, r: 12, t: 14, b: 24};
+  ctx.clearRect(0, 0, w, h);
+  if (data.length < 2){ ctx.fillStyle = "#6b7360"; ctx.font = "12px " + "Consolas, monospace"; ctx.textAlign = "center";
+    ctx.fillText(`no ${metric.label} data in range`, w/2, h/2); return; }
+  let min = Math.min(...data.map(x=>x.v)), max = Math.max(...data.map(x=>x.v));
+  const span = (max - min) || 1; min -= span * 0.12; max += span * 0.12;
+  const X = i => pad.l + i / (data.length - 1) * (w - pad.l - pad.r);
+  const Y = v => pad.t + (1 - (v - min) / (max - min)) * (h - pad.t - pad.b);
+  ctx.strokeStyle = "rgba(238,242,222,.07)"; ctx.fillStyle = "#6b7360";
+  ctx.font = "9px Consolas, monospace"; ctx.textAlign = "right"; ctx.lineWidth = 1;
+  for (let g = 0; g < 4; g++){
+    const yy = pad.t + g * (h - pad.t - pad.b) / 3;
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(w - pad.r, yy); ctx.stroke();
+    ctx.fillText(String(Math.round(max - (max - min) * g / 3)), pad.l - 6, yy + 3);
+  }
+  ctx.textAlign = "center";
+  [0, Math.floor((data.length-1)/2), data.length-1].forEach(i => ctx.fillText(data[i].date.slice(5), X(i), h - 8));
+  ctx.beginPath(); data.forEach((p,i)=> i ? ctx.lineTo(X(i), Y(p.v)) : ctx.moveTo(X(i), Y(p.v)));
+  ctx.lineTo(X(data.length-1), h - pad.b); ctx.lineTo(X(0), h - pad.b); ctx.closePath();
+  ctx.fillStyle = metric.color + "14"; ctx.fill();
+  ctx.beginPath(); data.forEach((p,i)=> i ? ctx.lineTo(X(i), Y(p.v)) : ctx.moveTo(X(i), Y(p.v)));
+  ctx.strokeStyle = metric.color; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+  const last = data[data.length-1];
+  ctx.beginPath(); ctx.arc(X(data.length-1), Y(last.v), 3.5, 0, 7); ctx.fillStyle = metric.color; ctx.fill();
+  cv.onmousemove = (e) => {
+    const r = cv.getBoundingClientRect();
+    const i = Math.round((e.clientX - r.left - pad.l) / (w - pad.l - pad.r) * (data.length - 1));
+    if (i < 0 || i >= data.length){ tip.style.display = "none"; return; }
+    const p = data[i];
+    tip.style.display = "block";
+    tip.style.left = Math.min(X(i) + 12, w - 130) + "px";
+    tip.style.top = (Y(p.v) + 6) + "px";
+    tip.innerHTML = `${p.date}<br><b>${metric.label}: ${metric.key === "sleep_hours" ? p.v.toFixed(1) : Math.round(p.v)}${metric.unit ? " " + metric.unit : ""}</b>`;
+  };
+  cv.onmouseleave = () => tip.style.display = "none";
+}
+
+function buildSegs(){
+  const ms = $("metricSeg");
+  METRICS.forEach(m => {
+    const b = document.createElement("button");
+    b.textContent = m.label; b.className = m === metric ? "on" : "";
+    b.onclick = () => { metric = m; ms.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); drawChart(); };
+    ms.appendChild(b);
+  });
+  const rs = $("rangeSeg");
+  RANGES.forEach(r => {
+    const b = document.createElement("button");
+    b.textContent = r.label; b.className = r.n === rangeN ? "on" : "";
+    b.onclick = () => { rangeN = r.n; rs.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); drawChart(); };
+    rs.appendChild(b);
+  });
+}
+
+async function refresh(){
+  const [ovR, daysR, actsR, insR, logR] = await Promise.all([
+    jget("/api/overview"), jget("/api/days?days=90"), jget("/api/activities?limit=20"),
+    jget("/api/insights"), jget("/api/log?limit=50"),
+  ]);
+  const ov = ovR.overview;
+  days90 = daysR.days;
+  statusChips(ov);
+  $("demoBanner").style.display = ov.demo ? "block" : "none";
+  renderGuidance(insR.guidance);
+  renderInsights(insR.insights);
+  renderSignals(ov, days90);
+  renderActs(actsR.activities);
+  renderLog(logR.entries);
+  renderCoverage(ov.coverage || {});
+  drawChart();
+}
+
+$("logForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const payload = {};
+  for (const [k, v] of fd.entries()){
+    if (!v && v !== 0){ payload[k] = null; continue; }
+    const n = Number(v);
+    payload[k] = ["sets","reps","load_kg","rpe","soreness"].includes(k) && v !== "" ? n : v;
+  }
+  const msg = $("formMsg");
+  try {
+    const r = await fetch("/api/log", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
+    const out = await r.json();
+    if (!out.ok) throw new Error(out.error || "failed");
+    msg.textContent = "saved ✓"; msg.className = "formmsg ok";
+    e.target.querySelectorAll("input:not([type=date]), select").forEach(x => { if (x.name !== "session") x.value = ""; });
+    refresh();
+  } catch (err){
+    msg.textContent = "error: " + err.message; msg.className = "formmsg err";
+  }
+  setTimeout(() => msg.textContent = "", 3500);
+});
+
+window.addEventListener("resize", drawChart);
+$("logForm").querySelector("input[name=date]").value = new Date().toISOString().slice(0,10);
+buildSegs();
+refresh();
+</script>
+</body>
+</html>

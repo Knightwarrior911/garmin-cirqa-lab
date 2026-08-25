@@ -1,0 +1,3 @@
+garminconnect>=0.3.2
+curl_cffi>=0.7
+fitdecode>=0.10
