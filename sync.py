@@ -67,8 +67,10 @@ def fetch_day(garmin, d):
         base = summary.get("baseline") or {}
         bundle["hrv_last_night"] = summary.get("lastNightAvg")
         bundle["hrv_weekly_avg"] = summary.get("weeklyAvg")
-        bundle["hrv_baseline_low"] = base.get("low")
-        bundle["hrv_baseline_high"] = base.get("high")
+        # Upstream baseline aliases: balancedLow/balancedUpper bound the balanced
+        # band; lowUpper tops the low band. Fall back to low/high if ever present.
+        bundle["hrv_baseline_low"] = base.get("balancedLow", base.get("low"))
+        bundle["hrv_baseline_high"] = base.get("balancedUpper", base.get("high"))
 
     sleep = safe(garmin, "get_sleep_data", d) or {}
     dto = sleep.get("dailySleepDTO") or {}
