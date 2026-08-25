@@ -3,213 +3,244 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CIRQA Performance Lab</title>
+<title>CIRQA Lab</title>
 <style>
   :root{
-    --bg:#0f110d; --panel:#161912; --panel2:#1c2016; --line:rgba(238,242,222,.09); --line2:rgba(238,242,222,.17);
-    --text:#eef2de; --muted:#9aa28c; --dim:#6b7360; --lime:#c9f36b; --amber:#f0b86b; --red:#f27b6c; --cyan:#7de0cf;
-    --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+    --page:#f7f7f5; --surface:#ffffff; --ink:#1d1d1f; --sub:#86868b;
+    --hair:rgba(0,0,0,.09); --hair2:rgba(0,0,0,.16);
+    --good:#2f9e5f; --warn:#d9962b; --bad:#d64545; --accent:#0071e3;
+    --deep:#3573b9; --rem:#6f9fd8; --light:#b8d49a; --awake:#d98a80;
+    --battery:#7fb069; --steps:#7d9bb5;
+    --radius:14px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-    font:14px/1.5 "Manrope","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-  a{color:var(--lime)}
-  .wrap{max-width:1180px;margin:0 auto;padding:20px 22px 60px}
-  .mono{font-family:var(--mono)}
+  html{background:var(--page)}
+  body{margin:0;color:var(--ink);background:var(--page);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased;animation:pagefade .18s ease-out}
+  @keyframes pagefade{from{opacity:0}to{opacity:1}}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font:inherit;cursor:pointer}
+  input,select{font:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 32px 64px}
+  section{margin-bottom:56px}
 
-  header{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.03em;font-size:16px}
-  .brand i{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime)}
-  .brand small{color:var(--dim);font:10px var(--mono);font-weight:400;letter-spacing:.08em}
-  .status{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .chip{border:1px solid var(--line);border-radius:99px;padding:4px 10px;font:10px var(--mono);color:var(--muted)}
-  .chip b{color:var(--text);font-weight:500}
-  .chip.demo{border-color:rgba(240,184,107,.4);color:var(--amber)}
-  .chip.err{border-color:rgba(242,123,108,.4);color:var(--red)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    padding-bottom:18px;border-bottom:1px solid var(--hair);margin-bottom:40px}
+  .brand{font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .brand small{color:var(--sub);font-weight:400;font-size:13px;margin-left:8px}
+  .statusline{display:flex;gap:8px;align-items:center;color:var(--sub);font-size:13px;flex-wrap:wrap}
+  .statusline .sep{color:rgba(0,0,0,.22)}
+  .pill{background:#fdeeca;color:#8a6116;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:500}
 
-  .banner{display:none;border:1px solid rgba(240,184,107,.35);background:rgba(240,184,107,.07);
-    border-radius:10px;padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:14px}
-  .banner code{font:11px var(--mono);color:var(--text)}
+  .banner{display:none;background:#fdf5e3;color:#8a6116;border-radius:12px;
+    padding:12px 16px;font-size:13px;margin-bottom:40px}
+  .banner code{background:rgba(0,0,0,.05);border-radius:5px;padding:1px 6px;font-size:12px}
 
-  section{margin-bottom:22px}
-  h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
-    font-family:var(--mono);font-weight:500;margin:0 0 10px}
+  .seclabel{font-size:13px;font-weight:500;color:var(--sub);margin:0 0 14px}
+  section > .seclabel b, .seclabel b{color:var(--ink);font-weight:600}
 
-  .heroes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-  .hero-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px 18px;
-    border-top:2px solid var(--hc,#5a6152)}
-  .hero-card.state-good{--hc:var(--lime)} .hero-card.state-mid{--hc:var(--amber)} .hero-card.state-rest{--hc:var(--cyan)}
-  .hc-head{display:flex;justify-content:space-between;align-items:baseline;
-    font:9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
-  .hc-head b{color:var(--hc,var(--muted));font-weight:500;letter-spacing:.06em}
-  .hc-main{display:flex;align-items:center;gap:16px;margin-top:12px}
-  .ring{--p:0;width:84px;height:84px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
-    background:conic-gradient(var(--hc,var(--lime)) calc(var(--p)*1%),rgba(255,255,255,.07) 0)}
-  .ring i{width:66px;height:66px;border-radius:50%;background:var(--panel);display:grid;place-items:center;
-    font-style:normal;font-size:21px;font-weight:800;letter-spacing:-.05em}
-  .ring i small{font-size:10px;color:var(--dim);font-weight:400;margin-left:1px}
-  .hc-side{min-width:0}
-  .hc-dir{font-size:17px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
-  .hc-sub{color:var(--muted);font-size:11px;margin-top:4px;line-height:1.4}
-  .hc-stats{margin-top:12px;border-top:1px solid var(--line);padding-top:9px;display:grid;gap:5px}
-  .hc-stat{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:baseline;font-size:11px}
-  .hc-stat span{font:9px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
-  .hc-stat b{font-weight:600;color:var(--text)}
-  .hc-stat i{font:9px var(--mono);font-style:normal;color:var(--dim)}
-  .hc-stat i.bad{color:var(--amber)} .hc-stat i.good{color:var(--lime)}
+  /* Today: asymmetric hero composition */
+  .today{display:grid;grid-template-columns:1.12fr .88fr}
+  .hero-main{padding-right:44px}
+  .hero-side{border-left:1px solid var(--hair);padding-left:44px;display:flex;flex-direction:column}
+  .kicker{font-size:13px;font-weight:500;color:var(--sub);display:flex;align-items:center;gap:8px}
+  .kicker .directive{color:var(--ink);font-weight:600}
+  .statedot{width:8px;height:8px;border-radius:50%;background:var(--sc,var(--good));display:inline-block}
+  .hero-num{font-size:72px;font-weight:600;letter-spacing:-.035em;line-height:1;margin:14px 0 6px;
+    font-variant-numeric:tabular-nums}
+  .hero-num .unit{font-size:22px;font-weight:500;color:var(--sub);letter-spacing:0;margin-left:4px}
+  .hero-line{font-size:16px;font-weight:500;line-height:1.4;max-width:42ch}
+  .drv{margin-top:22px;border-top:1px solid var(--hair)}
+  .drv-row{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:baseline;
+    padding:11px 0;border-bottom:1px solid var(--hair)}
+  .drv-row:last-child{border-bottom:0}
+  .drv-row span{font-size:12px;color:var(--sub)}
+  .drv-row b{font-weight:600;font-variant-numeric:tabular-nums}
+  .drv-row i{font-style:normal;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .drv-row i.bad{color:var(--warn)} .drv-row i.good{color:var(--good)}
+  .conf{margin-top:12px;font-size:12px;color:var(--sub)}
 
-  .insights{display:grid;gap:6px}
-  .ins{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
-  .ins summary{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;
-    padding:10px 14px;cursor:pointer;list-style:none;font-size:12.5px}
+  .hb{padding:20px 0}
+  .hb + .hb{border-top:1px solid var(--hair)}
+  .hb:first-child{padding-top:2px}
+  .block-num{font-size:42px;font-weight:600;letter-spacing:-.03em;line-height:1;margin:10px 0 6px;
+    font-variant-numeric:tabular-nums}
+  .block-num .unit{font-size:18px;font-weight:500;color:var(--sub);letter-spacing:0;margin-left:2px}
+  .hb-line{font-size:13px;color:var(--sub)}
+  .hb-stats{margin-top:12px;display:flex;gap:22px}
+  .hb-stats div span{display:block;font-size:11px;color:var(--sub)}
+  .hb-stats div b{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* Also tracking strip */
+  .strip{display:grid;grid-template-columns:repeat(4,1fr)}
+  .tile{padding:2px 24px;border-left:1px solid var(--hair)}
+  .tile:first-child{border-left:0;padding-left:0}
+  .tile .k{font-size:12px;color:var(--sub)}
+  .tile .v{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+  .tile .v small{font-size:13px;font-weight:400;color:var(--sub)}
+  .tile .d{font-size:12px;color:var(--sub);margin-top:2px;font-variant-numeric:tabular-nums}
+  .tile .d.up{color:var(--good)} .tile .d.down{color:var(--warn)}
+
+  /* Insights: hairline list */
+  .inslist{border-top:1px solid var(--hair)}
+  .ins{border-bottom:1px solid var(--hair)}
+  .ins summary{display:grid;grid-template-columns:12px 1fr 14px;gap:12px;align-items:center;
+    padding:14px 4px;cursor:pointer;list-style:none;font-size:14px}
   .ins summary::-webkit-details-marker{display:none}
-  .ins summary:hover{background:rgba(255,255,255,.03)}
-  .ins .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
-  .ins.action .dot{background:var(--red)} .ins.watch .dot{background:var(--amber)} .ins.info .dot{background:var(--cyan)}
-  .ins summary .sev{font:9px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
-  .ins .ins-body{padding:2px 14px 12px 32px;border-top:1px solid var(--line)}
-  .ins .finding{color:var(--muted);font-size:12px;margin:9px 0 0}
-  .ins .do{margin:7px 0 0;font-size:12px}
-  .ins .do b{color:var(--lime);font-weight:600}
-  .ins .conf{margin-top:7px;font:9px var(--mono);color:var(--dim)}
+  .ins summary:hover .t{color:var(--accent)}
+  .ins .dot{width:7px;height:7px;border-radius:50%;background:var(--sub)}
+  .ins.action .dot{background:var(--bad)} .ins.watch .dot{background:var(--warn)} .ins.info .dot{background:var(--good)}
+  .ins .t{font-weight:500}
+  .ins .chev{color:var(--sub);transition:transform .18s ease-out;font-size:12px}
+  .ins[open] .chev{transform:rotate(90deg)}
+  .ins .ins-body{padding:0 4px 16px 34px;max-width:72ch}
+  .hb-stats div b{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ins .do{font-size:13px;margin:0;line-height:1.55}
+  .ins .do b{color:var(--good);font-weight:600}
+  .ins .conf{margin-top:8px;font-size:11px;color:var(--sub)}
 
-  .signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-  .signal{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:13px 14px}
-  .signal .k{font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-  .signal .v{font-size:23px;font-weight:800;letter-spacing:-.05em;margin-top:8px}
-  .signal .v small{font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0}
-  .signal .d{font:10px var(--mono);margin-top:5px}
-  .signal .d.up{color:var(--lime)} .signal .d.down{color:var(--amber)} .signal .d.flat{color:var(--dim)}
-
-  .panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
-  .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-    padding:14px 16px;border-bottom:1px solid var(--line)}
-  .panel-head h3{margin:0;font-size:13px;letter-spacing:-.02em}
-  .seg{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:8px;padding:3px}
-  .seg button{border:0;background:transparent;color:var(--muted);font:10px var(--mono);
-    padding:5px 9px;border-radius:6px;cursor:pointer}
-  .seg button.on{background:var(--lime);color:#1c2412;font-weight:600}
-  .chartbox{position:relative;height:280px;padding:10px 12px}
+  /* Trends */
+  .trendbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .seg{display:inline-flex;background:#e8e8ed;border-radius:9px;padding:2px;gap:2px}
+  .seg button{border:0;background:transparent;color:var(--ink);font-size:12px;font-weight:500;
+    padding:5px 12px;border-radius:7px;transition:background .15s ease-out, box-shadow .15s ease-out}
+  .seg button:hover{color:#000}
+  .seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+  .chart-note{font-size:12px;color:var(--sub);margin-left:10px}
+  .chartbox{position:relative;height:300px}
   canvas{width:100%;height:100%;display:block}
-  .tooltip{position:absolute;pointer-events:none;display:none;background:#0c0e09;border:1px solid var(--line2);
-    border-radius:8px;padding:7px 10px;font:10px var(--mono);color:var(--text);z-index:5;white-space:nowrap}
-  .tooltip b{color:var(--lime)}
-  .legend{display:none;gap:8px;padding:0 16px 12px;flex-wrap:wrap}
-  .legend-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);
-    border:1px solid var(--line);border-radius:99px;color:var(--muted);font:10px var(--mono);
-    padding:4px 10px;cursor:pointer}
+  .tooltip{position:absolute;pointer-events:none;display:none;background:#fff;border:1px solid var(--hair);
+    border-radius:10px;padding:8px 11px;font-size:12px;color:var(--ink);z-index:5;white-space:nowrap;
+    box-shadow:0 4px 16px rgba(0,0,0,.10)}
+  .tooltip b{font-weight:600}
+  .legend{display:none;gap:6px;padding-top:12px;flex-wrap:wrap}
+  .legend-chip{display:inline-flex;align-items:center;gap:6px;background:transparent;
+    border:1px solid var(--hair2);border-radius:99px;color:var(--sub);font-size:12px;
+    padding:3px 11px;transition:opacity .15s ease-out}
+  .legend-chip:hover{background:rgba(0,0,0,.04)}
   .legend-chip i{width:8px;height:8px;border-radius:2px;display:inline-block}
-  .legend-chip.off{opacity:.4;text-decoration:line-through}
-  .chart-note{font:10px var(--mono);color:var(--dim);margin-left:10px;font-weight:400;
-    letter-spacing:0;text-transform:none}
+  .legend-chip.off{opacity:.35;text-decoration:line-through}
 
-  .acts{display:grid;gap:8px;padding:12px 14px}
-  .act{border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--panel2)}
+  /* Activities */
+  .act{padding:16px 4px;border-bottom:1px solid var(--hair)}
+  .act:first-child{padding-top:4px}
   .act .row1{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
-  .act .nm{font-weight:700;font-size:13px}
-  .act .meta{font:10px var(--mono);color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
-  .act .fade{font:10px var(--mono);border-radius:5px;padding:2px 7px}
-  .fade.lo{color:var(--lime);border:1px solid rgba(201,243,107,.3)}
-  .fade.mid{color:var(--amber);border:1px solid rgba(240,184,107,.35)}
-  .fade.hi{color:var(--red);border:1px solid rgba(242,123,108,.4)}
-  .splits{display:flex;gap:4px;align-items:flex-end;height:34px;margin-top:9px}
-  .splits i{flex:1;border-radius:3px 3px 0 0;background:var(--lime);opacity:.85;min-width:14px;position:relative}
-  .splits i.slow{background:var(--amber)} .splits i.slowest{background:var(--red)}
-  .splits-lab{display:flex;justify-content:space-between;font:9px var(--mono);color:var(--dim);margin-top:4px}
+  .act .nm{font-weight:600;font-size:14px}
+  .act .meta{color:var(--sub);font-size:12px;display:flex;gap:14px;flex-wrap:wrap;margin-top:4px;font-variant-numeric:tabular-nums}
+  .act .fade{font-size:12px;border-radius:99px;padding:1px 8px;font-variant-numeric:tabular-nums}
+  .fade.lo{color:var(--good);background:rgba(47,158,95,.10)}
+  .fade.mid{color:var(--warn);background:rgba(217,150,43,.12)}
+  .fade.hi{color:var(--bad);background:rgba(214,69,69,.10)}
+  .splits{display:flex;gap:4px;align-items:flex-end;height:34px;margin-top:10px}
+  .splits i{flex:1;border-radius:3px 3px 0 0;background:var(--good);opacity:.75;min-width:14px}
+  .splits i.slow{background:var(--warn)} .splits i.slowest{background:var(--bad)}
+  .splits-lab{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-top:4px;
+    font-variant-numeric:tabular-nums}
 
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  th{font:9px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
-    text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
-  td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.045);color:var(--muted)}
-  td:first-child{color:var(--text);font-weight:600}
-  .scroll{max-height:320px;overflow:auto}
-
-  .logform{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
-  .logform input,.logform select{width:100%;background:#101308;border:1px solid var(--line);border-radius:8px;
-    color:var(--text);padding:8px 9px;font-size:12px;outline:0}
-  .logform input:focus,.logform select:focus{border-color:var(--lime)}
-  .logform label{display:block;font:9px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+  /* Training log */
+  .logcard{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);
+    box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .logform{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;
+    padding:16px;border-bottom:1px solid var(--hair)}
+  .logform label{display:block;font-size:11px;color:var(--sub);margin-bottom:4px}
+  .logform input,.logform select{width:100%;background:#fff;border:1px solid var(--hair2);border-radius:8px;
+    color:var(--ink);padding:8px 10px;font-size:13px;outline:0;transition:border-color .15s ease-out}
+  .logform input:focus,.logform select:focus{border-color:var(--accent)}
   .logform .wide{grid-column:span 2}
-  .logform button{background:var(--lime);border:0;border-radius:8px;color:#1c2412;font-weight:700;
-    font-size:12px;padding:8px 14px;cursor:pointer;align-self:end}
-  .logform button:hover{filter:brightness(1.08)}
-  .formmsg{font:10px var(--mono);align-self:end;padding-bottom:8px}
-  .formmsg.ok{color:var(--lime)} .formmsg.err{color:var(--red)}
+  .logform button{background:var(--accent);border:0;border-radius:8px;color:#fff;font-weight:500;
+    font-size:13px;padding:8px 16px;align-self:end;transition:background .15s ease-out}
+  .logform button:hover{background:#0077ed}
+  .formmsg{font-size:12px;align-self:end;padding-bottom:8px}
+  .formmsg.ok{color:var(--good)} .formmsg.err{color:var(--bad)}
+  .scroll{max-height:340px;overflow:auto;border-radius:0 0 var(--radius) var(--radius)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:11px;font-weight:500;color:var(--sub);text-align:left;padding:10px 14px;
+    border-bottom:1px solid var(--hair);position:sticky;top:0;background:var(--surface)}
+  td{padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.05);color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  td:first-child{font-weight:500}
 
-  .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
-  .empty code{font:12px var(--mono);color:var(--lime)}
-  footer{border-top:1px solid var(--line);margin-top:26px;padding-top:14px;display:flex;justify-content:space-between;
-    gap:14px;flex-wrap:wrap;font:10px var(--mono);color:var(--dim)}
-  .cov{display:flex;gap:10px;flex-wrap:wrap}
-  .cov span b{color:var(--muted)}
+  .empty{padding:28px 4px;color:var(--sub);font-size:13px}
+  .empty code{background:rgba(0,0,0,.05);border-radius:5px;padding:1px 6px;font-size:12px}
+  footer{border-top:1px solid var(--hair);margin-top:56px;padding-top:16px;display:flex;
+    justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+  .cov{display:flex;gap:12px;flex-wrap:wrap}
 
-  @media(max-width:900px){ .heroes{grid-template-columns:1fr} .hc-main{gap:12px} }
-  @media(max-width:760px){
-    .chartbox{height:220px}
+  @media(max-width:900px){
+    .today{grid-template-columns:1fr}
+    .hero-main{padding-right:0;padding-bottom:28px;border-bottom:1px solid var(--hair);margin-bottom:8px}
+    .hero-side{border-left:0;padding-left:0}
+    .strip{grid-template-columns:repeat(2,1fr);gap:20px 0}
+    .tile:nth-child(3){border-left:0;padding-left:0}
+  }
+  @media(max-width:640px){
+    .wrap{padding:20px 18px 48px}
+    .hero-num{font-size:56px}
+    .chartbox{height:240px}
+    .tile{padding-right:8px}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><i></i> CIRQA Performance Lab <small>LOCAL · PRIVATE</small></div>
-    <div class="status" id="status"></div>
+    <div class="brand">CIRQA Lab<small>Private, on this device</small></div>
+    <div class="statusline" id="status"></div>
   </header>
 
   <div class="banner" id="demoBanner">
-    Demo data is loaded (synthetic). A real sync replaces it automatically:
-    <code>.venv\Scripts\python sync.py</code> &nbsp;or clear it now:
+    You are looking at synthetic demo data. A real sync replaces it automatically:
+    <code>.venv\Scripts\python sync.py</code> &nbsp;Clear it now:
     <code>.venv\Scripts\python sync.py --clear-demo</code>
   </div>
 
   <section>
-    <h2>Today</h2>
-    <div class="heroes" id="heroes"></div>
+    <p class="seclabel"><b>Today</b></p>
+    <div class="today" id="heroes"></div>
   </section>
 
   <section>
-    <h2>Also tracking</h2>
-    <div class="signals" id="signals"></div>
+    <p class="seclabel"><b>Also tracking</b></p>
+    <div class="strip" id="signals"></div>
   </section>
 
   <section>
-    <h2>Insights <span style="color:var(--dim);text-transform:none;letter-spacing:0">— click a row for the detail and the confirming test</span></h2>
-    <div class="insights" id="insights"></div>
+    <p class="seclabel"><b>Insights</b> · click a row for the detail and the confirming test</p>
+    <div class="inslist" id="insights"></div>
   </section>
 
   <section>
-    <div class="panel">
-      <div class="panel-head">
-        <h3>Trends <span class="chart-note" id="chartNote"></span></h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <div class="seg" id="metricSeg"></div>
-          <div class="seg" id="rangeSeg"></div>
-        </div>
+    <div class="trendbar">
+      <p class="seclabel" style="margin:0"><b>Trends</b><span class="chart-note" id="chartNote"></span></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="seg" id="metricSeg"></div>
+        <div class="seg" id="rangeSeg"></div>
       </div>
-      <div class="chartbox"><canvas id="chart"></canvas><div class="tooltip" id="tip"></div></div>
-      <div class="legend" id="legend"></div>
     </div>
+    <div class="chartbox"><canvas id="chart"></canvas><div class="tooltip" id="tip"></div></div>
+    <div class="legend" id="legend"></div>
   </section>
 
   <section>
-    <div class="panel">
-      <div class="panel-head"><h3>Activities <span style="color:var(--dim);font-weight:400;font-size:11px">— per-run split analysis</span></h3></div>
-      <div class="acts" id="acts"></div>
-    </div>
+    <p class="seclabel"><b>Activities</b> · per-run split analysis</p>
+    <div id="acts"></div>
   </section>
 
   <section>
-    <div class="panel">
-      <div class="panel-head">
-        <h3>Training log <span style="color:var(--dim);font-weight:400;font-size:11px">— the layer CIRQA cannot see</span></h3>
-        <a href="/api/log.csv" style="font:10px var(--mono)">export CSV</a>
+    <div class="logcard">
+      <div class="trendbar" style="padding:16px 16px 0;margin-bottom:0">
+        <p class="seclabel" style="margin:0"><b>Training log</b> · the layer CIRQA cannot see</p>
+        <a href="/api/log.csv" style="font-size:12px">Export CSV</a>
       </div>
       <form class="logform" id="logForm">
         <div><label>Date</label><input type="date" name="date" required></div>
         <div><label>Session</label>
           <select name="session"><option value="strength">strength</option><option value="run">run</option>
           <option value="hiit">hiit / hyrox</option><option value="easy">easy aerobic</option><option value="other">other</option></select></div>
-        <div class="wide"><label>Exercise / session name</label><input name="exercise" placeholder="Front squat 4x6"></div>
+        <div class="wide"><label>Exercise or session</label><input name="exercise" placeholder="Front squat 4x6"></div>
         <div><label>Sets</label><input name="sets" type="number" min="0" max="50"></div>
         <div><label>Reps</label><input name="reps" type="number" min="0" max="500"></div>
         <div><label>Load kg</label><input name="load_kg" type="number" step="0.5" min="0"></div>
@@ -227,7 +258,7 @@
 
   <footer>
     <div class="cov" id="cov"></div>
-    <div>sync: <code>.venv\Scripts\python sync.py</code> · insights recompute on every load</div>
+    <div>Sync: <code style="background:rgba(0,0,0,.05);border-radius:5px;padding:1px 6px">.venv\Scripts\python sync.py</code> · insights recompute on every load</div>
   </footer>
 </div>
 
@@ -235,127 +266,119 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const fmtPace = (spk) => { if (!spk) return "?"; const m = Math.floor(spk/60), s = Math.round(spk%60); return `${m}:${String(s).padStart(2,"0")}`; };
-const fmtDur = (s) => { if (!s) return "?"; const h = Math.floor(s/3600), m = Math.round((s%3600)/60); return h ? `${h}:${String(m).padStart(2,"0")}h` : `${m}m`; };
+const fmtDur = (s) => { if (!s) return "?"; const h = Math.floor(s/3600), m = Math.round((s%3600)/60); return h ? `${h}:${String(m).padStart(2,"0")} h` : `${m} min`; };
 const fmtDist = (m) => !m ? "—" : (m >= 950 ? (m/1000).toFixed(2) + " km" : Math.round(m) + " m");
 const fmtDate = (iso) => iso ? iso.slice(0,10) : "—";
 const mean = (a) => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
 
 const METRICS = [
-  {key:"hrv_last_night", label:"HRV", unit:"ms", color:"#c9f36b", type:"line",
-   bandLow:"hrv_baseline_low", bandHigh:"hrv_baseline_high",
-   note:"line + your balanced band"},
-  {key:"resting_hr", label:"RHR", unit:"bpm", color:"#f0b86b", type:"line",
-   note:"line · trend reading"},
-  {key:"spo2_avg", label:"SpO2", unit:"%", color:"#7de0cf", type:"line",
-   note:"line · narrow band"},
-  {key:"stress_avg", label:"Stress", unit:"", color:"#f27b6c", type:"area",
-   note:"area · daily load carried"},
+  {key:"hrv_last_night", label:"HRV", unit:"ms", color:"#2f9e5f", type:"line",
+   bandLow:"hrv_baseline_low", bandHigh:"hrv_baseline_high", note:"with your balanced band"},
+  {key:"resting_hr", label:"RHR", unit:"bpm", color:"#d68948", type:"line", note:"trend reading"},
+  {key:"spo2_avg", label:"SpO2", unit:"%", color:"#4a8fd0", type:"line", note:"narrow band"},
+  {key:"stress_avg", label:"Stress", unit:"", color:"#d66a5e", type:"area", note:"daily load carried"},
   {key:"sleep_hours", label:"Sleep", type:"stacked", unit:"h",
    series:[
-     {key:"sleep_deep_s",  label:"Deep",  color:"#7de0cf"},
-     {key:"sleep_rem_s",   label:"REM",   color:"#5f9de0"},
-     {key:"sleep_light_s", label:"Light", color:"#c9f36b"},
-     {key:"sleep_awake_s", label:"Awake", color:"#f27b6c"}],
-   target:8, note:"stacked · nightly composition, 8 h target"},
+     {key:"sleep_deep_s",  label:"Deep",  color:"#3573b9"},
+     {key:"sleep_rem_s",   label:"REM",   color:"#6f9fd8"},
+     {key:"sleep_light_s", label:"Light", color:"#b8d49a"},
+     {key:"sleep_awake_s", label:"Awake", color:"#d98a80"}],
+   target:8, note:"nightly composition, 8 h target"},
   {key:"body_battery_high", label:"Body Battery", type:"range", lowKey:"body_battery_low",
-   color:"#c9f36b", domain:[0,100], note:"range columns · nightly low → daily high"},
-  {key:"steps", label:"Steps", type:"column", color:"#c9f36b",
-   note:"columns · daily volume"},
+   color:"#7fb069", domain:[0,100], note:"nightly low to daily high"},
+  {key:"steps", label:"Steps", type:"column", color:"#7d9bb5", note:"daily volume"},
   {key:"training_readiness", label:"Readiness", type:"column", banded:true,
-   note:"columns · banded score"},
+   note:"banded score"},
 ];
 const RANGES = [{label:"7D", n:7},{label:"28D", n:28},{label:"90D", n:90}];
-let days90 = [], metric = METRICS[0], rangeN = 28;
+let days90 = [], metric = METRICS[0], rangeN = 28, hoverIdx = null;
+const stageOff = new Set();
 
 async function jget(url){ const r = await fetch(url); return r.json(); }
 
 function statusChips(ov){
   const el = $("status"); el.innerHTML = "";
-  const add = (html, cls) => { const s = document.createElement("span"); s.className = "chip" + (cls ? " " + cls : ""); s.innerHTML = html; el.appendChild(s); };
-  if (ov.demo) add("DEMO DATA", "demo");
-  add(`days <b>${ov.days}</b>`);
-  if (ov.last_day) add(`range <b>${ov.first_day} → ${ov.last_day}</b>`);
-  add(`last sync <b>${ov.last_sync ? ov.last_sync.finished_at.slice(0,16).replace("T"," ") : "never"}</b>`);
-  add(`activities <b>${ov.activities}</b>`);
-  add(`log <b>${ov.log_entries}</b>`);
+  const seg = (t) => { const s = document.createElement("span"); s.textContent = t; el.appendChild(s); };
+  const sep = () => { const s = document.createElement("span"); s.className = "sep"; s.textContent = "·"; el.appendChild(s); };
+  if (ov.demo){ const p = document.createElement("span"); p.className = "pill"; p.textContent = "Demo data"; el.appendChild(p); sep(); }
+  seg(`${ov.days} days`); sep();
+  if (ov.first_day) seg(`${fmtDate(ov.first_day)} to ${fmtDate(ov.last_day)}`); sep();
+  seg(`synced ${ov.last_sync ? ov.last_sync.finished_at.slice(11,16) : "never"}`);
 }
 
 function renderHeroes(g, load, ov, days){
   const el = $("heroes");
   const latest = ov.latest;
   if (!latest){
-    el.innerHTML = `<div class="empty" style="grid-column:1/-1">No data yet — run <code>.venv\\Scripts\\python sync.py</code> (or <code>--demo</code> to preview)</div>`;
+    el.innerHTML = `<div class="empty">No data yet. Run <code>.venv\\Scripts\\python sync.py</code> to pull your Garmin data, or <code>sync.py --demo</code> to preview the interface.</div>`;
     return;
   }
   const st = g.state || "mid";
-  const ring = (pct, inner) => `<div class="ring" style="--p:${Math.max(2, Math.min(100, pct))}"><i>${inner}</i></div>`;
+  const stColor = st === "good" ? "var(--good)" : st === "mid" ? "var(--warn)" : "var(--bad)";
 
-  // Recovery card
   const drv = (g.drivers || []).map(d =>
-    `<div class="hc-stat"><span>${d.label}</span><b>${d.value}</b><i class="${d.state}">${d.detail}</i></div>`).join("");
-  const recovery = `<article class="hero-card state-${st}">
-    <div class="hc-head">Recovery <b>${g.directive}</b></div>
-    <div class="hc-main">${ring(g.score, `${g.score}`)}
-      <div class="hc-side"><div class="hc-dir">${g.headline.split(".")[0]}.</div>
-      <div class="hc-sub">vs your 28-day baseline · confidence ${g.confidence}</div></div>
-    </div>
-    <div class="hc-stats">${drv || `<div class="hc-stat"><span>—</span><b>collecting baseline</b><i></i></div>`}</div>
-  </article>`;
+    `<div class="drv-row"><span>${d.label}</span><b>${d.value}</b><i class="${d.state}">${d.detail}</i></div>`).join("");
 
-  // Sleep card
+  const recovery = `
+    <article class="hero-main">
+      <div class="kicker"><span class="statedot" style="--sc:${stColor}"></span>Recovery
+        <b class="directive" style="color:${stColor}">${g.directive}</b></div>
+      <div class="hero-num" style="color:${stColor}">${g.score}<span class="unit">/ 100</span></div>
+      <div class="hero-line">${g.headline}</div>
+      <div class="drv">${drv || `<div class="drv-row"><span>Baseline</span><b>collecting</b><i>about 7 days of data unlocks this</i></div>`}</div>
+      <div class="conf">Confidence ${g.confidence}. Recomputed locally on every load.</div>
+    </article>`;
+
   const sh = latest.sleep_hours, ss = latest.sleep_score;
   const deepMin = latest.sleep_deep_s != null ? Math.round(latest.sleep_deep_s / 60) : null;
   const remMin = latest.sleep_rem_s != null ? Math.round(latest.sleep_rem_s / 60) : null;
-  const sleepPct = sh ? Math.min(100, Math.round(sh / 8 * 100)) : 0;
   const sleepState = sh == null ? "mid" : sh >= 7 ? "good" : sh >= 6 ? "mid" : "rest";
-  const sleep = `<article class="hero-card state-${sleepState}">
-    <div class="hc-head">Last night's sleep <b>${sh != null ? (sh >= 7 ? "on target" : "short") : "no data"}</b></div>
-    <div class="hc-main">${ring(sleepPct, `${sh != null ? sh.toFixed(1) : "—"}<small>h</small>`)}
-      <div class="hc-side"><div class="hc-dir">${sh != null ? `${Math.round((8 - sh) * 60)} min vs 8 h target` : "sync to populate"}</div>
-      <div class="hc-sub">${ss != null ? `sleep score ${ss}` : ""}</div></div>
-    </div>
-    <div class="hc-stats">
-      <div class="hc-stat"><span>Deep</span><b>${deepMin != null ? deepMin + " min" : "—"}</b><i></i></div>
-      <div class="hc-stat"><span>REM</span><b>${remMin != null ? remMin + " min" : "—"}</b><i></i></div>
-      <div class="hc-stat"><span>Score</span><b>${ss != null ? ss : "—"}</b><i>/ 100</i></div>
-    </div>
-  </article>`;
+  const sleepCol = sleepState === "good" ? "var(--good)" : sleepState === "mid" ? "var(--warn)" : "var(--bad)";
+  const sleep = `
+    <article class="hb">
+      <div class="kicker">Last night's sleep <b class="directive" style="color:${sh != null ? sleepCol : "var(--sub)"}">${sh == null ? "no data" : sh >= 7 ? "on target" : "short"}</b></div>
+      <div class="block-num">${sh != null ? sh.toFixed(1) : "—"}<span class="unit">h</span></div>
+      <div class="hb-line">${sh != null ? `${sh >= 8 ? "target met" : Math.round((8 - sh) * 60) + " min short of the 8 h target"}` : "sync to populate"}${ss != null ? ` · score ${ss}` : ""}</div>
+      <div class="hb-stats">
+        <div><span>Deep</span><b>${deepMin != null ? deepMin + " min" : "—"}</b></div>
+        <div><span>REM</span><b>${remMin != null ? remMin + " min" : "—"}</b></div>
+      </div>
+    </article>`;
 
-  // Load card
   const ratio = load && load.ratio;
   const loadState = ratio == null ? "mid" : ratio > 1.3 ? "rest" : ratio < 0.7 ? "mid" : "good";
-  const loadPct = ratio != null ? Math.min(100, Math.round(ratio / 2 * 100)) : 0;
+  const loadCol = loadState === "good" ? "var(--good)" : loadState === "mid" ? "var(--warn)" : "var(--bad)";
   const loadTxt = ratio == null ? "collecting" : ratio > 1.3 ? "spiking" : ratio < 0.7 ? "tapering" : "balanced";
-  const loadCard = `<article class="hero-card state-${loadState}">
-    <div class="hc-head">Training load <b>${loadTxt}</b></div>
-    <div class="hc-main">${ring(loadPct, ratio != null ? `${Math.round(ratio * 100)}<small>%</small>` : "—")}
-      <div class="hc-side"><div class="hc-dir">${ratio != null ? `${ratio.toFixed(2)}× your 3-week norm` : "need ~3 weeks"}</div>
-      <div class="hc-sub">this week vs prior 3-week average</div></div>
-    </div>
-    <div class="hc-stats">
-      <div class="hc-stat"><span>Sessions</span><b>${load ? load.sessions_7d : "—"}<small style="color:var(--dim)"> / 7d</small></b><i></i></div>
-      <div class="hc-stat"><span>This week</span><b>${load ? load.acute : "—"}</b><i>load units</i></div>
-      <div class="hc-stat"><span>Norm</span><b>${load && load.chronic_weekly ? load.chronic_weekly : "—"}</b><i>weekly</i></div>
-    </div>
-  </article>`;
+  const loadCard = `
+    <article class="hb">
+      <div class="kicker">Training load <b class="directive" style="color:${loadCol}">${loadTxt}</b></div>
+      <div class="block-num">${ratio != null ? ratio.toFixed(2) + "<span class='unit'>×</span>" : "—"}</div>
+      <div class="hb-line">${ratio != null ? "this week vs your 3-week norm" : "needs about 3 weeks of history"}</div>
+      <div class="hb-stats">
+        <div><span>Sessions</span><b>${load ? load.sessions_7d : "—"}<span style="color:var(--sub);font-weight:400"> / 7 d</span></b></div>
+        <div><span>This week</span><b>${load ? load.acute : "—"}</b></div>
+        <div><span>Norm</span><b>${load && load.chronic_weekly ? load.chronic_weekly : "—"}</b></div>
+      </div>
+    </article>`;
 
-  el.innerHTML = recovery + sleep + loadCard;
+  el.innerHTML = `<div class="hero-main-wrap" style="display:contents"></div>` + recovery +
+    `<div class="hero-side">${sleep}${loadCard}</div>`;
 }
 
 function renderInsights(list){
   const el = $("insights");
   if (!list.length){
-    el.innerHTML = `<div class="empty">Not enough data for insights yet (need ~7+ days and a few activities).
-      Sync daily and log gym sessions — rules fire automatically.<br><code>.venv\\Scripts\\python sync.py</code></div>`;
+    el.innerHTML = `<div class="empty">Insights unlock with about a week of syncs and a few activities.
+      Keep the daily sync running and log gym sessions below.</div>`;
     return;
   }
   el.innerHTML = list.map(i => `
     <details class="ins ${i.severity}">
-      <summary><i class="dot"></i><span>${i.title}</span><span class="sev">${i.severity}</span></summary>
+      <summary><span class="dot"></span><span class="t">${i.title}</span><span class="chev">›</span></summary>
       <div class="ins-body">
         <p class="finding">${i.finding}</p>
         <p class="do"><b>Next:</b> ${i.action}</p>
-        <div class="conf">confidence: ${i.confidence}</div>
+        <div class="conf">Confidence: ${i.confidence}</div>
       </div>
     </details>`).join("");
 }
@@ -363,35 +386,35 @@ function renderInsights(list){
 function renderSignals(ov, days){
   const el = $("signals");
   const latest = ov.latest;
-  if (!latest){ el.innerHTML = `<div class="empty">No days stored yet — run <code>.venv\\Scripts\\python sync.py</code></div>`; return; }
+  if (!latest){ el.innerHTML = `<div class="empty">No days stored yet.</div>`; return; }
   const prev = days.slice(0, -1).slice(-7);
-  const card = (k, label, fmt, unit, lowerBetter) => {
+  const tile = (k, label, fmt, unit, lowerBetter) => {
     const v = latest[k];
     const p = prev.map(d => d[k]).filter(x => x !== null && x !== undefined);
-    let delta = "", cls = "flat";
+    let delta = "", cls = "";
     if (v != null && p.length >= 3){
       const pm = mean(p);
       const diff = v - pm;
       if (Math.abs(diff) > (unit === "bpm" ? 1 : unit === "%" ? 0.5 : 400)){
         const good = lowerBetter ? diff < 0 : diff > 0;
         cls = good ? "up" : "down";
-        delta = `${diff > 0 ? "+" : ""}${Math.abs(diff) >= 100 ? (diff/1000).toFixed(1)+"k" : diff.toFixed(1)}${unit} vs 7d`;
-      } else delta = `~ 7d avg`;
+        delta = `${diff > 0 ? "+" : ""}${Math.abs(diff) >= 100 ? (diff/1000).toFixed(1)+"k" : diff.toFixed(1)}${unit} vs 7 d`;
+      } else delta = `near 7 d avg`;
     }
-    return `<div class="signal"><div class="k">${label}</div>
+    return `<div class="tile"><div class="k">${label}</div>
       <div class="v">${v != null ? fmt(v) : "—"} ${unit && v != null ? `<small>${unit}</small>` : ""}</div>
       <div class="d ${cls}">${delta}</div></div>`;
   };
   el.innerHTML =
-    card("stress_avg", "Stress", (v)=>Math.round(v), "", true) +
-    card("spo2_avg", "SpO2", (v)=>v.toFixed(1), "%", true) +
-    card("steps", "Steps", (v)=>v >= 10000 ? (v/1000).toFixed(1)+"k" : Math.round(v), "", false) +
-    card("training_readiness", "Readiness", (v)=>Math.round(v), "", false);
+    tile("stress_avg", "Stress", (v)=>Math.round(v), "", true) +
+    tile("spo2_avg", "SpO2", (v)=>v.toFixed(1), "%", true) +
+    tile("steps", "Steps", (v)=>v >= 10000 ? (v/1000).toFixed(1)+"k" : Math.round(v), "", false) +
+    tile("training_readiness", "Readiness", (v)=>Math.round(v), "", false);
 }
 
 function renderActs(acts){
   const el = $("acts");
-  if (!acts.length){ el.innerHTML = `<div class="empty">No activities yet. They appear after your first sync (runs get per-km split analysis).</div>`; return; }
+  if (!acts.length){ el.innerHTML = `<div class="empty">No activities yet. They appear after your first sync; runs get per-kilometre split analysis.</div>`; return; }
   el.innerHTML = acts.map(a => {
     const pace = a.distance_m && a.duration_s ? fmtPace(a.duration_s / a.distance_m * 1000) : null;
     let fadeHtml = "", splitsHtml = "";
@@ -400,21 +423,21 @@ function renderActs(acts){
       const fade = ps.length >= 2 ? (ps[ps.length-1] - ps[0]) / ps[0] * 100 : null;
       if (fade !== null){
         const cls = fade > 6 ? "hi" : fade > 3 ? "mid" : "lo";
-        fadeHtml = `<span class="fade ${cls}">fade ${fade > 0 ? "+" : ""}${fade.toFixed(1)}%</span>`;
+        fadeHtml = `<span class="fade ${cls}">fade +${fade.toFixed(1)}%</span>`;
       }
       const maxP = Math.max(...ps), minP = Math.min(...ps);
       splitsHtml = `<div class="splits">` + a.splits.map(s => {
         const rel = maxP === minP ? 0.7 : 0.25 + 0.75 * (s.pace_s_per_km - minP) / (maxP - minP);
         const c = rel > 0.85 ? "slowest" : rel > 0.6 ? "slow" : "";
         const h = Math.round(14 + (1 - rel) * 18);
-        return `<i class="${c}" style="height:${h}px" title="${fmtPace(s.pace_s_per_km)} /km @ ${s.avg_hr || "?"} bpm"></i>`;
+        return `<i class="${c}" style="height:${h}px" title="${fmtPace(s.pace_s_per_km)} /km at ${s.avg_hr || "?"} bpm"></i>`;
       }).join("") + `</div>
-      <div class="splits-lab"><span>km 1 · ${fmtPace(ps[0])}</span><span>HR ${a.splits[0].avg_hr || "?"} → ${a.splits[a.splits.length-1].avg_hr || "?"} bpm</span><span>km ${ps.length} · ${fmtPace(ps[ps.length-1])}</span></div>`;
+      <div class="splits-lab"><span>km 1 · ${fmtPace(ps[0])}</span><span>HR ${a.splits[0].avg_hr || "?"} to ${a.splits[a.splits.length-1].avg_hr || "?"} bpm</span><span>km ${ps.length} · ${fmtPace(ps[ps.length-1])}</span></div>`;
     }
     return `<div class="act">
       <div class="row1">
         <span class="nm">${a.name || a.type || "Activity"}</span>
-        <span style="display:flex;gap:8px;align-items:center">${fadeHtml}<span class="mono" style="font:10px var(--mono);color:var(--dim)">${fmtDate(a.start_iso || a.start_local)}</span></span>
+        <span style="display:flex;gap:10px;align-items:center">${fadeHtml}<span style="font-size:12px;color:var(--sub)">${fmtDate(a.start_iso || a.start_local)}</span></span>
       </div>
       <div class="meta">
         <span>${a.type || ""}</span>
@@ -422,8 +445,7 @@ function renderActs(acts){
         ${a.distance_m ? `<span>${fmtDist(a.distance_m)}</span>` : ""}
         ${pace ? `<span>${pace} /km</span>` : ""}
         ${a.avg_hr ? `<span>avg HR ${a.avg_hr}</span>` : ""}
-        ${a.elevation_m ? `<span>↑ ${Math.round(a.elevation_m)} m</span>` : ""}
-        ${a.max_hr ? `<span>max ${a.max_hr}</span>` : ""}
+        ${a.elevation_m ? `<span>${Math.round(a.elevation_m)} m up</span>` : ""}
       </div>
       ${splitsHtml}
     </div>`;
@@ -432,21 +454,18 @@ function renderActs(acts){
 
 function renderLog(entries){
   const tb = $("logTable").querySelector("tbody");
-  if (!entries.length){ tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px">No entries yet — log strength work below so recovery-coupling insights can use it.</td></tr>`; return; }
+  if (!entries.length){ tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--sub)">No entries yet. Log strength work here so recovery-coupling insights can use it.</td></tr>`; return; }
   tb.innerHTML = entries.map(e => `<tr>
     <td>${e.date}</td><td>${e.session || ""}</td><td>${e.exercise || ""}</td>
-    <td>${e.sets || "?"} x ${e.reps || "?"}</td><td>${e.load_kg != null ? e.load_kg + " kg" : "—"}</td>
+    <td>${e.sets || "?"} × ${e.reps || "?"}</td><td>${e.load_kg != null ? e.load_kg + " kg" : "—"}</td>
     <td>${e.rpe != null ? e.rpe : "—"}</td><td>${e.soreness != null ? e.soreness : "—"}</td>
-    <td>${e.notes || ""}</td></tr>`).join("");
+    <td style="color:var(--sub)">${e.notes || ""}</td></tr>`).join("");
 }
 
 function renderCoverage(cov){
-  const items = [["HRV","hrv"],["RHR","resting_hr"],["Sleep","sleep"],["Stress","stress"],["BodyBattery","body_battery"],["SpO2","spo2"],["Readiness","readiness"]];
-  $("cov").innerHTML = items.map(([l,k]) => `<span>${l} <b>${cov[k] ?? 0}</b>/90d</span>`).join("");
+  const items = [["HRV","hrv"],["RHR","resting_hr"],["Sleep","sleep"],["Stress","stress"],["Body Battery","body_battery"],["SpO2","spo2"],["Readiness","readiness"]];
+  $("cov").innerHTML = items.map(([l,k]) => `<span>${l} <b>${cov[k] ?? 0}</b>/90 d</span>`).join("");
 }
-
-let hoverIdx = null;
-const stageOff = new Set();   // toggled sleep stages (stacked chart legend)
 
 function chartRows(){
   const rows = days90.slice(-rangeN);
@@ -469,7 +488,7 @@ function chartRows(){
 function fmtVal(v){
   if (v == null) return "—";
   if (metric.key === "steps") return v >= 10000 ? (v/1000).toFixed(1) + "k" : Math.round(v);
-  if (metric.type === "stacked") return v.toFixed(1) + "h";
+  if (metric.type === "stacked") return v.toFixed(1) + " h";
   const dec = (metric.key === "spo2_avg" || metric.key === "stress_avg") ? 1 : 0;
   return Number(v).toFixed(dec) + (metric.unit ? " " + metric.unit : "");
 }
@@ -492,17 +511,16 @@ function renderChart(){
   const dpr = window.devicePixelRatio || 1;
   cv.width = box.width * dpr; cv.height = box.height * dpr;
   const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
-  const w = box.width, h = box.height, pad = {l: 42, r: 12, t: 14, b: 24};
+  const w = box.width, h = box.height, pad = {l: 44, r: 12, t: 16, b: 26};
   ctx.clearRect(0, 0, w, h);
-  ctx.font = "9px Consolas, monospace";
+  ctx.font = "11px -apple-system, 'Segoe UI', sans-serif";
   if (!data.length){
-    ctx.fillStyle = "#6b7360"; ctx.textAlign = "center";
-    ctx.fillText(`no ${metric.label} data in range`, w/2, h/2);
+    ctx.fillStyle = "#86868b"; ctx.textAlign = "center";
+    ctx.fillText(`No ${metric.label} data in this range yet`, w/2, h/2);
     cv.onmousemove = null; cv.onmouseleave = null; tip.style.display = "none";
     return;
   }
 
-  // y-domain per chart type
   let lo, hi;
   if (metric.type === "range"){ [lo, hi] = metric.domain; }
   else if (metric.type === "stacked"){
@@ -522,29 +540,27 @@ function renderChart(){
   const Y = v => pad.t + (1 - (v - lo) / (hi - lo)) * (h - pad.t - pad.b);
   const slot = (w - pad.l - pad.r) / data.length;
 
-  // grid + y labels
-  ctx.strokeStyle = "rgba(238,242,222,.07)"; ctx.fillStyle = "#6b7360";
+  ctx.strokeStyle = "rgba(29,29,31,.06)"; ctx.fillStyle = "#86868b";
   ctx.textAlign = "right"; ctx.lineWidth = 1;
   for (let g = 0; g < 4; g++){
     const yy = pad.t + g * (h - pad.t - pad.b) / 3;
     ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(w - pad.r, yy); ctx.stroke();
     const v = hi - (hi - lo) * g / 3;
-    const yl = (hi - lo) >= 8 || metric.type !== "line" && metric.type !== "area" ? Math.round(v) : Math.round(v * 10) / 10;
+    const yl = (hi - lo) >= 8 || (metric.type !== "line" && metric.type !== "area") ? Math.round(v) : Math.round(v * 10) / 10;
     ctx.fillText(metric.key === "steps" ? (yl >= 1000 ? (yl/1000).toFixed(1) + "k" : String(yl)) : String(yl), pad.l - 6, yy + 3);
   }
-  // x labels
   ctx.textAlign = "center";
   const ticks = data.length <= 3 ? data.map((_, i) => i) : [0, Math.floor((data.length - 1) / 2), data.length - 1];
   ticks.forEach(i => ctx.fillText(data[i].date.slice(5),
-    Math.min(Math.max(X(i), pad.l + 14), w - pad.r - 14), h - 8));
+    Math.min(Math.max(X(i), pad.l + 16), w - pad.r - 16), h - 8));
 
-  if ((metric.type === "line") && metric.bandLow){
+  if (metric.type === "line" && metric.bandLow){
     const pts = data.filter(x => x.lo != null && x.hi != null);
     if (pts.length >= 2){
       ctx.beginPath();
       pts.forEach((p, k) => { const i = data.indexOf(p); k ? ctx.lineTo(X(i), Y(p.hi)) : ctx.moveTo(X(i), Y(p.hi)); });
       for (let k = pts.length - 1; k >= 0; k--){ const i = data.indexOf(pts[k]); ctx.lineTo(X(i), Y(pts[k].lo)); }
-      ctx.closePath(); ctx.fillStyle = "rgba(201,243,107,.09)"; ctx.fill();
+      ctx.closePath(); ctx.fillStyle = "rgba(47,158,95,.08)"; ctx.fill();
     }
   }
 
@@ -552,7 +568,7 @@ function renderChart(){
     if (metric.type === "area"){
       ctx.beginPath(); data.forEach((p, i) => i ? ctx.lineTo(X(i), Y(p.v)) : ctx.moveTo(X(i), Y(p.v)));
       ctx.lineTo(X(data.length - 1), h - pad.b); ctx.lineTo(X(0), h - pad.b); ctx.closePath();
-      ctx.fillStyle = metric.color + "1c"; ctx.fill();
+      ctx.fillStyle = metric.color + "1f"; ctx.fill();
     }
     ctx.beginPath(); data.forEach((p, i) => i ? ctx.lineTo(X(i), Y(p.v)) : ctx.moveTo(X(i), Y(p.v)));
     ctx.strokeStyle = metric.color; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
@@ -564,10 +580,10 @@ function renderChart(){
   if (metric.type === "column"){
     const bw = Math.max(3, Math.min(26, slot * 0.62));
     data.forEach((p, i) => {
-      const col = metric.banded ? (p.v >= 70 ? "#c9f36b" : p.v >= 50 ? "#f0b86b" : "#f27b6c") : metric.color;
-      ctx.fillStyle = col + (hoverIdx === i ? "" : "cc");
+      const col = metric.banded ? (p.v >= 70 ? "#2f9e5f" : p.v >= 50 ? "#d9962b" : "#d64545") : metric.color;
+      ctx.fillStyle = col + (hoverIdx === i ? "" : "c7");
       roundRect(ctx, X(i) - bw/2, Y(p.v), bw, h - pad.b - Y(p.v), 3); ctx.fill();
-      if (hoverIdx === i){ ctx.strokeStyle = "#eef2de"; ctx.lineWidth = 1.5; ctx.stroke(); }
+      if (hoverIdx === i){ ctx.strokeStyle = "#1d1d1f"; ctx.lineWidth = 1.5; ctx.stroke(); }
     });
   }
 
@@ -578,22 +594,22 @@ function renderChart(){
       p.parts.forEach(part => {
         if (part.v == null || stageOff.has(part.key)) return;
         const y0 = Y(acc), y1 = Y(acc + part.v);
-        ctx.fillStyle = part.color + (hoverIdx === i ? "" : "d9");
+        ctx.fillStyle = part.color + (hoverIdx === i ? "" : "e6");
         ctx.fillRect(X(i) - bw/2, y1, bw, Math.max(1, y0 - y1));
         acc += part.v;
       });
       if (hoverIdx === i){
-        ctx.strokeStyle = "#eef2de"; ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#1d1d1f"; ctx.lineWidth = 1.5;
         ctx.strokeRect(X(i) - bw/2, Y(acc), bw, h - pad.b - Y(acc));
       }
     });
     if (metric.target && metric.target <= hi){
       const ty = Y(metric.target);
-      ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(240,184,107,.8)";
+      ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(217,150,43,.75)";
       ctx.beginPath(); ctx.moveTo(pad.l, ty); ctx.lineTo(w - pad.r, ty); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(240,184,107,.9)"; ctx.textAlign = "left";
-      ctx.fillText(`${metric.target}h target`, w - pad.r - 54, ty - 4);
+      ctx.fillStyle = "rgba(160,116,30,.9)"; ctx.textAlign = "left";
+      ctx.fillText(`${metric.target} h target`, w - pad.r - 56, ty - 4);
     }
   }
 
@@ -601,10 +617,10 @@ function renderChart(){
     const bw = Math.max(3, Math.min(26, slot * 0.62));
     data.forEach((p, i) => {
       const yHi = Y(Math.min(p.hi, hi)), yLo = Y(Math.max(p.lo, lo));
-      ctx.fillStyle = metric.color + (hoverIdx === i ? "" : "b3");
+      ctx.fillStyle = metric.color + (hoverIdx === i ? "" : "cc");
       roundRect(ctx, X(i) - bw/2, yHi, bw, Math.max(2, yLo - yHi), 3); ctx.fill();
-      ctx.fillStyle = hoverIdx === i ? "#eef2de" : "rgba(238,242,222,.5)";
-      ctx.fillRect(X(i) - bw/2, yLo - 1, bw, 2);   // nightly low marker
+      ctx.fillStyle = hoverIdx === i ? "#1d1d1f" : "rgba(29,29,31,.45)";
+      ctx.fillRect(X(i) - bw/2, yLo - 1, bw, 2);
     });
   }
 
@@ -628,20 +644,20 @@ function renderChart(){
     let html = `<b>${p.date}</b><br>`;
     if (metric.type === "stacked"){
       const vis = p.parts.filter(x => x.v != null && !stageOff.has(x.key));
-      html += vis.map(x => `<span style="color:${x.color}">■</span> ${x.label}: ${x.v.toFixed(1)}h`).join("<br>");
+      html += vis.map(x => `<span style="color:${x.color}">●</span> ${x.label}: ${x.v.toFixed(1)} h`).join("<br>");
       const shown = vis.reduce((a, x) => a + x.v, 0);
-      html += `<br><b>shown: ${shown.toFixed(1)}h</b>`;
-      if (p.total != null) html += ` <span style="color:#6b7360">(device total ${p.total.toFixed(1)}h)</span>`;
+      html += `<br><b>shown: ${shown.toFixed(1)} h</b>`;
+      if (p.total != null) html += ` <span style="color:#86868b">(device total ${p.total.toFixed(1)} h)</span>`;
     } else if (metric.type === "range"){
-      html += `<b>high ${Math.round(p.hi)} → low ${Math.round(p.lo)}</b> ` +
-              `<span style="color:#6b7360">(swing ${Math.round(p.hi - p.lo)})</span>`;
+      html += `<b>high ${Math.round(p.hi)} to low ${Math.round(p.lo)}</b> ` +
+              `<span style="color:#86868b">(swing ${Math.round(p.hi - p.lo)})</span>`;
     } else {
       html += `<b>${metric.label}: ${fmtVal(p.v)}</b>`;
-      if (p.lo != null && p.hi != null) html += `<br><span style="color:#6b7360">your band ${Math.round(p.lo)}–${Math.round(p.hi)}</span>`;
+      if (p.lo != null && p.hi != null) html += `<br><span style="color:#86868b">your band ${Math.round(p.lo)} to ${Math.round(p.hi)}</span>`;
     }
     tip.innerHTML = html;
     tip.style.display = "block";
-    tip.style.left = Math.min(X(i) + 12, w - 160) + "px";
+    tip.style.left = Math.min(X(i) + 12, w - 170) + "px";
     tip.style.top = (pad.t + 8) + "px";
     if (moved) renderChart();
   };
@@ -674,7 +690,7 @@ function buildSegs(){
   METRICS.forEach(m => {
     const b = document.createElement("button");
     b.textContent = m.label; b.className = m === metric ? "on" : "";
-    b.onclick = () => { metric = m; hoverIdx = null; $("tip").style.display = "none"; ms.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); $("chartNote").textContent = m.note || ""; renderLegend(); renderChart(); };
+    b.onclick = () => { metric = m; hoverIdx = null; $("tip").style.display = "none"; ms.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); $("chartNote").textContent = m.note ? "· " + m.note : ""; renderLegend(); renderChart(); };
     ms.appendChild(b);
   });
   const rs = $("rangeSeg");
@@ -718,11 +734,11 @@ $("logForm").addEventListener("submit", async (e) => {
     const r = await fetch("/api/log", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
     const out = await r.json();
     if (!out.ok) throw new Error(out.error || "failed");
-    msg.textContent = "saved ✓"; msg.className = "formmsg ok";
+    msg.textContent = "Saved"; msg.className = "formmsg ok";
     e.target.querySelectorAll("input:not([type=date]), select").forEach(x => { if (x.name !== "session") x.value = ""; });
     refresh();
   } catch (err){
-    msg.textContent = "error: " + err.message; msg.className = "formmsg err";
+    msg.textContent = "Error: " + err.message; msg.className = "formmsg err";
   }
   setTimeout(() => msg.textContent = "", 3500);
 });
@@ -730,7 +746,7 @@ $("logForm").addEventListener("submit", async (e) => {
 window.addEventListener("resize", renderChart);
 $("logForm").querySelector("input[name=date]").value = new Date().toISOString().slice(0,10);
 buildSegs();
-$("chartNote").textContent = metric.note || "";
+$("chartNote").textContent = metric.note ? "· " + metric.note : "";
 renderLegend();
 refresh();
 </script>
