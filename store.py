@@ -197,6 +197,15 @@ def add_log_entry(conn, e, source="user"):
     return cur.lastrowid
 
 
+def get_log(conn, limit=50):
+    rows = conn.execute("SELECT * FROM training_log ORDER BY date DESC, id DESC LIMIT ?", (int(limit),)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def log_count(conn):
+    return conn.execute("SELECT COUNT(*) c FROM training_log").fetchone()["c"]
+
+
 def log_sync(conn, mode, days_requested, days_written, activities_written, ok, error=None):
     conn.execute(
         "INSERT INTO sync_log (started_at, finished_at, mode, days_requested, days_written, "
