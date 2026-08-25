@@ -53,6 +53,7 @@ def fetch_day(garmin, d):
     bundle = {k: None for k in ("date", "steps", "calories", "resting_hr", "stress_avg",
                                 "body_battery_high", "body_battery_low", "spo2_avg",
                                 "respiration_avg", "sleep_seconds", "sleep_score",
+                                "sleep_deep_s", "sleep_rem_s", "sleep_light_s", "sleep_awake_s",
                                 "hrv_last_night", "hrv_weekly_avg", "hrv_baseline_low",
                                 "hrv_baseline_high", "training_readiness")}
     bundle["date"] = d
@@ -77,6 +78,11 @@ def fetch_day(garmin, d):
     bundle["sleep_seconds"] = dto.get("sleepTimeSeconds")
     score = (dto.get("sleepScores") or {}).get("overall") or {}
     bundle["sleep_score"] = score.get("value")
+    # Stage breakdown powers the stacked sleep chart; absent stages stay NULL.
+    bundle["sleep_deep_s"] = dto.get("deepSleepSeconds")
+    bundle["sleep_rem_s"] = dto.get("remSleepSeconds")
+    bundle["sleep_light_s"] = dto.get("lightSleepSeconds")
+    bundle["sleep_awake_s"] = dto.get("awakeSleepSeconds")
 
     stress = safe(garmin, "get_stress_data", d)
     if isinstance(stress, dict):
@@ -254,8 +260,14 @@ def seed_demo(conn, days, quiet):
         improving = idx_from_end / max(1, days - 1)  # 1.0 = oldest, 0.0 = today
         sleep_h = rnd.uniform(6.4, 8.4) - 0.35 * improving
         hrv = int(rnd.uniform(52, 60) + 6 * (1 - improving))
+        hrv_weekly_base = 55 + 5 * (1 - improving)  # smooth band the daily value wobbles inside
         rhr = int(rnd.uniform(49, 53) - 2 * (1 - improving))
         bb_high = int(rnd.uniform(78, 98) + 8 * (1 - improving))
+        total_s = int(sleep_h * 3600)
+        deep_s = int(total_s * rnd.uniform(0.14, 0.20))
+        rem_s = int(total_s * rnd.uniform(0.20, 0.25))
+        awake_s = int(900 + rnd.uniform(0, 900))
+        light_s = max(0, total_s - deep_s - rem_s - awake_s)
         store.upsert_day(conn, {
             "date": d,
             "steps": int(rnd.uniform(6500, 14500)),
@@ -268,10 +280,14 @@ def seed_demo(conn, days, quiet):
             "respiration_avg": round(rnd.uniform(13.2, 15.4), 1),
             "sleep_seconds": int(sleep_h * 3600),
             "sleep_score": int(rnd.uniform(62, 88)),
+            "sleep_deep_s": deep_s,
+            "sleep_rem_s": rem_s,
+            "sleep_light_s": light_s,
+            "sleep_awake_s": awake_s,
             "hrv_last_night": hrv,
             "hrv_weekly_avg": round(hrv + rnd.uniform(-2, 2), 1),
-            "hrv_baseline_low": hrv - 6,
-            "hrv_baseline_high": hrv + 7,
+            "hrv_baseline_low": int(hrv_weekly_base - 5),
+            "hrv_baseline_high": int(hrv_weekly_base + 6),
             "training_readiness": int(rnd.uniform(58, 92) + 6 * (1 - improving)),
             "extracted_json": json.dumps({"demo": True}),
         }, source="demo")

@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS days (
   respiration_avg REAL,
   sleep_seconds INTEGER,
   sleep_score INTEGER,
+  sleep_deep_s INTEGER,
+  sleep_rem_s INTEGER,
+  sleep_light_s INTEGER,
+  sleep_awake_s INTEGER,
   hrv_last_night INTEGER,
   hrv_weekly_avg REAL,
   hrv_baseline_low INTEGER,
@@ -84,7 +88,8 @@ CREATE TABLE IF NOT EXISTS sync_log (
 DAY_COLUMNS = [
     "date", "steps", "calories", "resting_hr", "stress_avg",
     "body_battery_high", "body_battery_low", "spo2_avg", "respiration_avg",
-    "sleep_seconds", "sleep_score", "hrv_last_night", "hrv_weekly_avg",
+    "sleep_seconds", "sleep_score", "sleep_deep_s", "sleep_rem_s", "sleep_light_s",
+    "sleep_awake_s", "hrv_last_night", "hrv_weekly_avg",
     "hrv_baseline_low", "hrv_baseline_high", "training_readiness",
 ]
 
