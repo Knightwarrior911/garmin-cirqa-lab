@@ -72,6 +72,10 @@ Routine sync refreshes today/yesterday and skips older cached dates. Endpoint fa
 
 ## Vercel and iPhone
 
+Production dashboard: **https://garmin-cirqa-lab.vercel.app**
+
+The owner access code is saved locally in ignored `data/cloud-owner-access.txt`; never commit it or share it publicly.
+
 `app.py` is the Flask entrypoint. Vercel's filesystem is temporary: `cloud_state.py` stores a compressed, **private** Blob containing a consistent SQLite backup, Garmin token file and job metadata. Reads reconstruct an isolated temporary database. Conditional ETag writes acquire a 330-second account-wide lease and prevent an old request from overwriting a newer snapshot. Daily sync is bounded to 220 seconds; activity detail to 180 seconds, within a 300-second function.
 
 The cloud frontend checks saved data once a minute while idle, more often during sync. It requests Garmin refresh on opening and every 30 minutes while visible. A daily cron runs at `02:30 UTC` (08:00 Asia/Kolkata; Hobby scheduling can be imprecise). Nothing depends on the PC remaining on after migration.
