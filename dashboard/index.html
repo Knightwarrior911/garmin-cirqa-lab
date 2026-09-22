@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
     <title>CIRQA · Garmin dashboard</title>
     <meta name="theme-color" content="#204e40" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -12,15 +15,16 @@
     <script src="/pwa.js" defer></script>
     <style>
       :root {
-        --bg: #f5f6f3;
+        --bg: #f3f6fb;
         --paper: #fff;
-        --ink: #202b28;
-        --muted: #64716b;
-        --line: #dfe5df;
-        --green: #34705d;
-        --blue: #527ca4;
-        --amber: #a97825;
-        --violet: #857ba8;
+        --ink: #14213b;
+        --muted: #56657a;
+        --line: #e1e7ef;
+        --green: #246bfd;
+        --blue: #246bfd;
+        --amber: #bb7b2c;
+        --violet: #9270d8;
+        color-scheme: light;
       }
       * {
         box-sizing: border-box;
@@ -30,9 +34,17 @@
         background: var(--bg);
         color: var(--ink);
         font:
-          14px/1.5 "Segoe UI",
-          system-ui,
+          14px/1.5 Inter,
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
           sans-serif;
+      }
+      main {
+        max-width: 1160px;
+        margin: auto;
+        padding: 24px 32px 48px;
       }
       button,
       select {
@@ -41,194 +53,418 @@
       }
       button {
         cursor: pointer;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 15px;
+        font-size: 12px;
+        font-weight: 650;
+        min-height: 42px;
+      }
+      button:hover {
+        background: #edf2fc;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
       }
       button:focus-visible,
       summary:focus-visible,
-      select:focus-visible {
-        outline: 3px solid #527ca4;
+      select:focus-visible,
+      a:focus-visible {
+        outline: 3px solid #729bff;
         outline-offset: 3px;
       }
-      button {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: white;
-        padding: 8px 14px;
-      }
-      button:hover {
-        background: #edf2ed;
-      }
-      button:disabled {
-        opacity: 0.6;
-        cursor: wait;
-      }
-      main {
-        max-width: 1180px;
-        margin: auto;
-        padding: 32px 32px 48px;
+      a {
+        color: var(--blue);
+        text-underline-offset: 4px;
       }
       header {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        gap: 20px;
-        border-bottom: 1px solid var(--line);
+        gap: 16px;
         padding-bottom: 22px;
       }
       .brand {
-        font-weight: 650;
-        font-size: 21px;
-        letter-spacing: -0.6px;
+        font-size: 25px;
+        font-weight: 850;
+        letter-spacing: -1px;
+        margin-right: auto;
       }
       .brand span {
-        font-size: 13px;
-        font-weight: 400;
+        display: block;
         color: var(--muted);
-        letter-spacing: 0;
-        margin-left: 12px;
+        font-size: 9px;
+        font-weight: 650;
+        letter-spacing: 1.5px;
+        margin-top: 3px;
       }
       .sync {
-        text-align: right;
-        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 10px;
         color: var(--muted);
       }
       .sync button {
-        margin-left: 12px;
+        color: var(--blue);
+        background: #e4ecff;
+        border-color: transparent;
+      }
+      .app-nav {
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 14px;
+        margin-bottom: 25px;
+      }
+      .app-nav a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 18px;
+        border-radius: 100px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      .app-nav a[aria-current="page"] {
+        background: #e2ebff;
+        color: #154dc3;
+      }
+      .app-nav svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       h1 {
-        font-size: 30px;
-        font-weight: 550;
-        letter-spacing: -0.8px;
-        margin: 30px 0 3px;
+        font-size: 36px;
+        letter-spacing: -1.4px;
+        line-height: 1.15;
+        margin: 24px 0 8px;
+        font-weight: 750;
       }
       h2 {
-        font-size: 19px;
-        font-weight: 600;
-        letter-spacing: -0.3px;
+        font-size: 23px;
+        letter-spacing: -0.7px;
         margin: 0;
+        line-height: 1.3;
       }
       h3 {
-        font-size: 14px;
-        font-weight: 550;
+        font-size: 13px;
+        font-weight: 650;
         margin: 0;
       }
       .sub,
       .note {
+        font-size: 11px;
         color: var(--muted);
-        font-size: 12px;
       }
       .sub {
-        margin: 0 0 24px;
+        margin: 0 0 20px;
       }
       .hero {
         display: grid;
-        grid-template-columns: 1.05fr 1fr 1fr;
-        gap: 18px;
+        grid-template-columns: 1.25fr 1fr 1fr;
+        gap: 16px;
       }
       .card {
         background: var(--paper);
-        border: 1px solid var(--line);
-        border-radius: 14px;
+        border: 0;
+        border-radius: 24px;
         padding: 24px;
         min-width: 0;
       }
-      .primary {
-        border-top: 3px solid var(--green);
-        padding-top: 22px;
+      .hero .card {
+        display: flex;
+        flex-direction: column;
+      }
+      .hero .primary {
+        background: #12213b;
+        --ink: #fff;
+        --muted: #b9c8dd;
+        color: #fff;
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr);
+        column-gap: 16px;
+        align-items: center;
+      }
+      .readiness-ring {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        grid-column: 1;
+        grid-row: 2;
+      }
+      .readiness-ring svg {
+        width: 100%;
+        height: 100%;
+      }
+      .readiness-value {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .readiness-value strong {
+        font-size: 53px;
+        line-height: 1;
+        letter-spacing: -2.5px;
+        font-weight: 700;
+      }
+      .readiness-value small {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .primary > .eyebrow {
+        grid-column: 1/-1;
+        margin-bottom: 15px;
+      }
+      .readiness-meta {
+        grid-column: 2;
+        grid-row: 2;
+      }
+      .primary .state {
+        color: #d3f56a;
+        font-size: 17px;
+        font-weight: 650;
+      }
+      .readiness-meta .note {
+        font-size: 10px;
+        margin-top: 9px;
+      }
+      .primary .mini {
+        grid-column: 1/-1;
+        color: #d3f56a;
+        width: 100%;
+        margin-top: 16px;
+      }
+      .primary .pair {
+        margin-top: 14px;
+        font-size: 10px;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .hero .card:nth-child(2) {
+        background: #dff3ec;
+      }
+      .hero .card:nth-child(3) {
+        background: #eae5fb;
       }
       .eyebrow {
-        font-size: 13px;
         color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1.15px;
+        font-weight: 700;
       }
       .number {
-        font-size: 52px;
-        line-height: 1.2;
+        font-size: 48px;
+        font-weight: 700;
+        line-height: 1.15;
         letter-spacing: -2px;
-        font-weight: 550;
         font-variant-numeric: tabular-nums;
-        margin: 12px 0 4px;
+        margin: 16px 0 8px;
       }
       .number small {
-        font-size: 17px;
+        font-size: 12px;
         font-weight: 400;
         letter-spacing: 0;
         color: var(--muted);
-        margin-left: 5px;
-      }
-      .state {
-        color: var(--green);
-        font-weight: 600;
+        margin-left: 6px;
       }
       .rail {
-        height: 7px;
-        border-radius: 4px;
-        background: #edf1ed;
+        height: 6px;
+        background: #c9e2d8;
+        border-radius: 10px;
         overflow: hidden;
-        margin: 20px 0 10px;
+        margin: 15px 0 8px;
       }
       .rail i {
         display: block;
         height: 100%;
-        background: var(--green);
-        border-radius: 4px;
+        background: #2d9d80 !important;
+        border-radius: 10px;
       }
       .pair {
         display: flex;
         justify-content: space-between;
-        gap: 10px;
-        font-size: 12px;
+        gap: 8px;
+        font-size: 11px;
         color: var(--muted);
       }
       .pair b {
         color: var(--ink);
-        font-weight: 550;
+        font-weight: 650;
       }
       .stagebar {
         display: flex;
-        height: 18px;
+        height: 16px;
+        gap: 2px;
         overflow: hidden;
-        border-radius: 4px;
-        margin: 20px 0 12px;
+        border-radius: 6px;
+        margin: 15px 0 10px;
       }
       .stages {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px 14px;
-        font-size: 12px;
+        gap: 6px 10px;
+        font-size: 10px;
       }
       .stages span {
         display: inline-block;
-        width: 7px;
-        height: 7px;
-        margin-right: 6px;
+        width: 6px;
+        height: 6px;
+        margin-right: 5px;
         border-radius: 2px;
+      }
+      .sleep-details {
+        margin-top: 12px;
+      }
+      .sleep-details summary {
+        font-size: 10px;
+      }
+      .hero .mini {
+        margin-top: auto;
+        padding-top: 15px;
+      }
+      .score-axis {
+        display: flex;
+        justify-content: space-between;
+        font-size: 9px;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .train-link {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        text-decoration: none;
+        color: var(--ink);
+        background: #e2eaff;
+        border-radius: 20px;
+        padding: 20px 24px;
+        margin: 18px 0 26px;
+      }
+      .train-link strong {
+        display: block;
+        font-size: 16px;
+        letter-spacing: -0.3px;
+      }
+      .train-link small {
+        display: block;
+        font-size: 11px;
+        color: #52678a;
+        margin-top: 5px;
+      }
+      .train-link > span:last-child {
+        font-size: 22px;
+        color: var(--blue);
       }
       .metrics {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 18px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
         margin-top: 18px;
       }
       .metrics .card {
         padding: 20px;
       }
-      .metrics .number {
-        font-size: 32px;
-        letter-spacing: -1px;
+      .metric-card {
+        display: flex;
+        flex-direction: column;
+      }
+      .metric-title {
+        display: flex;
+        gap: 9px;
+        align-items: center;
+      }
+      .metric-icon {
+        width: 29px;
+        height: 29px;
+        padding: 5px;
+        border-radius: 9px;
+        background: #edf2fb;
+        color: var(--series);
+        flex-shrink: 0;
+      }
+      .metric-icon svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .metric-card .number {
+        font-size: 35px;
+        letter-spacing: -1.5px;
+        margin-top: 14px;
+      }
+      .metric-card .mini {
+        margin-top: auto;
+        padding-top: 16px;
+      }
+      .mini {
+        color: var(--series, var(--blue));
+      }
+      .mini svg {
+        display: block;
+        width: 100%;
+        height: 52px;
+      }
+      .mini-caption {
+        display: flex;
+        justify-content: space-between;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 9px;
+        margin-top: 4px;
+      }
+      .mini .empty {
+        font-size: 11px;
+        padding: 12px 0;
+      }
+      .goal {
+        margin-top: 12px;
+      }
+      .goal .rail {
+        margin: 7px 0;
+        height: 5px;
+      }
+      .goal-label {
+        font-size: 10px;
+        color: var(--muted);
       }
       .native {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px 32px;
-        padding: 20px 0;
-        border-bottom: 1px solid var(--line);
+        gap: 18px 30px;
+        padding: 22px;
+        border-radius: 20px;
+        background: #e8edf6;
+        margin-top: 18px;
+      }
+      .native > div {
+        flex: 1 1 130px;
       }
       .native b {
         display: block;
-        font-size: 18px;
-        font-weight: 550;
+        font-size: 21px;
+        font-weight: 650;
+        letter-spacing: -0.5px;
+      }
+      .native small {
+        font-size: 10px;
       }
       .section {
-        margin-top: 36px;
+        margin-top: 26px;
       }
       .sectionhead {
         display: flex;
@@ -237,40 +473,72 @@
         gap: 12px;
         margin-bottom: 18px;
       }
+      .sectionhead a {
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .disclosure {
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+      }
+      .disclosure > summary {
+        font-size: 20px;
+        letter-spacing: -0.4px;
+        font-weight: 650;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .disclosure > summary:after {
+        content: "+";
+        font-size: 23px;
+        color: var(--blue);
+        font-weight: 400;
+      }
+      .disclosure[open] > summary:after {
+        content: "−";
+      }
+      .disclosure .sectionhead {
+        margin-top: 20px;
+      }
       .segments {
         display: flex;
         gap: 3px;
-        background: #e8ede7;
-        padding: 3px;
-        border-radius: 8px;
+        background: #e7edf6;
+        border-radius: 12px;
+        padding: 4px;
       }
       .segments button {
         border: 0;
         background: none;
-        font-size: 12px;
-        padding: 5px 12px;
+        font-size: 11px;
+        padding: 6px 12px;
+        min-height: 34px;
       }
       .segments button[aria-pressed="true"] {
         background: #fff;
-        box-shadow: 0 1px 2px #0001;
+        color: var(--blue);
       }
       .charts {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
       }
       .chart {
-        padding: 20px 22px 14px;
+        padding: 22px;
       }
       .charthead {
         display: flex;
-        align-items: baseline;
         justify-content: space-between;
+        align-items: baseline;
         gap: 10px;
       }
       .charthead strong {
-        font-size: 20px;
-        font-weight: 550;
+        font-size: 26px;
+        font-weight: 650;
+        letter-spacing: -0.7px;
         font-variant-numeric: tabular-nums;
       }
       .chart svg {
@@ -280,224 +548,404 @@
         overflow: visible;
       }
       .chart text {
-        font-family: "Segoe UI", sans-serif;
+        font-family: inherit;
         font-size: 11px;
         fill: var(--muted);
       }
       .chart text.label {
         fill: var(--ink);
         font-size: 12px;
-        font-weight: 550;
+        font-weight: 600;
       }
       .chart .note {
         min-height: 18px;
       }
       .chart details {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
-        margin-top: 6px;
+        margin-top: 8px;
       }
       .chart table {
         width: 100%;
         border-collapse: collapse;
       }
       .chart td {
-        padding: 3px;
+        padding: 5px;
         border-bottom: 1px solid var(--line);
       }
       summary {
         cursor: pointer;
       }
+      #activities {
+        display: grid;
+        gap: 8px;
+      }
       .activity {
         display: grid;
-        grid-template-columns: 130px 1fr 90px 90px;
-        gap: 16px;
-        padding: 14px 0;
-        border-bottom: 1px solid var(--line);
+        grid-template-columns: 95px 1fr 90px 90px;
+        gap: 18px;
         align-items: center;
+        padding: 18px 22px;
+        border-radius: 17px;
+        background: white;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .activity:hover {
+        background: #e8eef9;
+      }
+      .activity .when {
+        font-size: 10px;
+      }
+      .activity .when small {
+        display: block;
+      }
+      .activity > div:nth-child(2) {
+        font-size: 13px;
+        font-weight: 600;
       }
       .activity .value {
         text-align: right;
+        font-size: 20px;
+        letter-spacing: -0.5px;
         font-variant-numeric: tabular-nums;
       }
       .activity small {
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0;
+      }
+      .activity .hr {
+        font-size: 13px;
         color: var(--muted);
       }
-      a.activity {
-        color: inherit;
-        text-decoration: none;
-      }
-      a.activity:hover {
-        background: #edf2ed;
-      }
-      a.activity:focus-visible {
-        outline: 3px solid var(--blue);
-        outline-offset: 3px;
-      }
-      .activity:first-child {
-        padding-top: 0;
-      }
       .error {
-        padding: 14px 18px;
+        padding: 16px;
+        border-radius: 12px;
+        background: #fff0db;
+        color: #785516;
         margin: 16px 0;
-        border: 1px solid #d8bc83;
-        background: #fff8e9;
-        border-radius: 8px;
       }
       .empty {
         color: var(--muted);
         padding: 22px 0;
+        font-size: 12px;
       }
       .unavailable {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
         margin-top: 20px;
       }
       footer {
-        border-top: 1px solid var(--line);
-        margin-top: 36px;
-        padding-top: 18px;
-        color: var(--muted);
-        font-size: 12px;
         display: flex;
         justify-content: space-between;
         gap: 20px;
+        border-top: 1px solid var(--line);
+        margin-top: 32px;
+        padding-top: 18px;
+        font-size: 10px;
+        color: var(--muted);
       }
       .loading {
-        padding: 60px 0;
+        padding: 50px 0;
         color: var(--muted);
       }
       [hidden] {
         display: none !important;
       }
-      @media (max-width: 850px) {
+      @media (max-width: 1000px) {
         .hero {
           grid-template-columns: 1fr 1fr;
         }
         .hero .primary {
           grid-column: 1/-1;
+          grid-template-columns: 140px 1fr 1.2fr;
+          gap: 10px 24px;
+        }
+        .primary > .eyebrow {
+          grid-column: 1/3;
+          margin: 0;
+        }
+        .readiness-ring {
+          grid-row: 2;
+        }
+        .readiness-meta {
+          grid-row: 2;
+        }
+        .hero .primary .mini {
+          grid-column: 3;
+          grid-row: 1/3;
+          margin: 0;
+          padding: 0;
         }
         .metrics {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 760px) {
+        main {
+          padding: 20px 20px calc(98px + env(safe-area-inset-bottom));
+        }
+        header {
+          gap: 6px;
+          padding-bottom: 10px;
+        }
+        .brand {
+          font-size: 23px;
+        }
+        .brand span {
+          font-size: 8px;
+          letter-spacing: 1.1px;
+        }
+        .sync {
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 5px;
+          font-size: 9px;
+        }
+        .sync button {
+          font-size: 10px;
+          padding: 8px 11px;
+          min-height: 34px;
+        }
+        header > button {
+          font-size: 10px !important;
+          padding: 7px !important;
+          min-height: 34px;
+        }
+        .app-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 5;
+          justify-content: space-around;
+          margin: 0;
+          padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
+          background: #ffffffed;
+          backdrop-filter: blur(16px);
+          border-top: 1px solid var(--line);
+          border-bottom: 0;
+        }
+        .app-nav a {
+          flex: 1;
+          flex-direction: column;
+          gap: 4px;
+          font-size: 10px;
+          padding: 6px 4px;
+          border-radius: 14px;
+          max-width: 110px;
+        }
+        .app-nav svg {
+          width: 21px;
+          height: 21px;
+        }
+        h1 {
+          font-size: 30px;
+          margin: 20px 0 7px;
+          letter-spacing: -1px;
+        }
+        .sub {
+          font-size: 10px;
+          margin-bottom: 18px;
+        }
+        .hero {
+          gap: 12px;
+        }
+        .card {
+          padding: 18px;
+          border-radius: 21px;
+        }
+        .hero .primary {
+          grid-template-columns: 130px minmax(0, 1fr);
+          gap: 8px 14px;
+          padding: 22px;
+        }
+        .readiness-ring {
+          width: 130px;
+          height: 130px;
+        }
+        .hero .primary .mini {
+          grid-column: 1/-1;
+          grid-row: 3;
+          margin-top: 5px;
+          padding: 0;
+        }
+        .primary .mini svg {
+          height: 36px;
+        }
+        .primary .eyebrow {
+          font-size: 9px;
+        }
+        .primary .state {
+          font-size: 17px;
+        }
+        .readiness-meta .note {
+          font-size: 9px;
+        }
+        .primary .pair {
+          font-size: 10px;
+          margin-top: 12px;
+        }
+        .eyebrow {
+          font-size: 9px;
+          letter-spacing: 0.8px;
+        }
+        .hero .number {
+          font-size: 39px;
+          margin: 12px 0 8px;
+        }
+        .hero .number small {
+          font-size: 10px;
+        }
+        .hero .note,
+        .hero .pair {
+          font-size: 9px;
+        }
+        .hero .mini svg {
+          height: 40px;
+        }
+        .hero .mini-caption {
+          font-size: 8px;
+          flex-wrap: wrap;
+        }
+        .hero .stagebar {
+          height: 13px;
+        }
+        .hero .stages {
+          grid-template-columns: 1fr;
+          font-size: 9px;
+        }
+        .hero .sleep-number {
+          font-size: 30px;
+        }
+        .hero .mini {
+          padding-top: 12px;
+        }
+        .train-link {
+          padding: 18px 20px;
+          margin: 14px 0 24px;
+        }
+        .train-link strong {
+          font-size: 15px;
+        }
+        .train-link small {
+          font-size: 10px;
+        }
+        .metrics {
+          gap: 12px;
+        }
+        .metrics .card {
+          padding: 17px 14px;
+        }
+        .metric-title {
+          gap: 6px;
+          align-items: flex-start;
+        }
+        .metric-title h3 {
+          font-size: 11px;
+        }
+        .metric-icon {
+          width: 24px;
+          height: 24px;
+          padding: 4px;
+        }
+        .metric-card .number {
+          font-size: 29px;
+        }
+        .metric-card .number small {
+          font-size: 11px;
+        }
+        .mini-caption {
+          flex-wrap: wrap;
+          font-size: 8px;
+        }
+        .metric-card .note {
+          font-size: 10px;
+        }
+        .metric-card .mini svg {
+          height: 45px;
         }
         .charts {
           grid-template-columns: 1fr;
         }
-      }
-      @media (max-width: 540px) {
-        main {
+        .chart {
           padding: 20px 16px;
         }
-        .brand span {
-          display: block;
-          margin: 0;
-        }
-        .sync {
-          max-width: 190px;
-        }
-        .sync button {
-          margin: 6px 0 0;
-        }
-        .hero {
-          grid-template-columns: 1fr;
-        }
-        .card {
-          padding: 20px;
+        .charthead strong {
+          font-size: 24px;
         }
         .sectionhead {
-          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .sectionhead h2 {
+          font-size: 21px;
+        }
+        .disclosure > summary {
+          font-size: 19px;
+        }
+        .native {
+          gap: 16px;
+          padding: 18px;
         }
         .activity {
-          grid-template-columns: 1fr 70px;
-          gap: 2px 10px;
+          grid-template-columns: 1fr 65px;
+          gap: 5px 10px;
+          padding: 16px 18px;
         }
         .activity .when {
           grid-column: 1/-1;
+          display: flex;
+          gap: 8px;
+        }
+        .activity .value {
+          font-size: 18px;
         }
         .activity .hr {
-          display: none;
+          grid-column: 1/-1;
+          text-align: left;
+          font-size: 11px;
         }
-        .number {
-          font-size: 44px;
+        .activity > div:nth-child(2) {
+          font-size: 13px;
+        }
+        .section {
+          margin-top: 24px;
         }
         footer {
           display: block;
+          font-size: 9px;
         }
-        .chart {
-          padding: 18px 16px;
+        footer > span {
+          display: block;
+          margin-bottom: 10px;
         }
-      }
-      .hero .card { display: flex; flex-direction: column; }
-      .hero .primary {
-        background: #204e40;
-        border-color: #204e40;
-        --ink: #fff;
-        --muted: #d1e3da;
-        color: var(--ink);
-      }
-      .primary .state { color: #d1e3da; }
-      .primary .rail { background: #416c5d; }
-      .primary .rail i { background: #c4e2cb !important; }
-      .hero .card:nth-child(2) { background: #f0f5eb; }
-      .hero .card:nth-child(3) { background: #eff3f8; }
-      .hero .eyebrow { text-transform: uppercase; letter-spacing: 1px; font-size: 11px; font-weight: 650; }
-      .hero .number { font-size: 64px; font-weight: 650; }
-      .hero .stagebar { height: 28px; gap: 2px; }
-      .hero .mini { margin-top: auto; padding-top: 22px; }
-      .metric-card { display: flex; flex-direction: column; border-top: 3px solid var(--series); }
-      .metric-card .mini { margin-top: auto; padding-top: 16px; }
-      .metric-title { display: flex; align-items: center; gap: 9px; }
-      .metric-icon { width: 30px; height: 30px; padding: 5px; border-radius: 8px; background: #f1f4f2; color: var(--series); flex-shrink: 0; }
-      .metric-icon svg { display: block; width: 100%; height: 100%; }
-      .metric-card .number { margin-top: 14px; font-size: 38px; }
-      .mini { margin-top: 16px; color: var(--series, var(--green)); }
-      .primary .mini { color: #c4e2cb; }
-      .mini svg { display: block; width: 100%; height: 62px; }
-      .mini-caption { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10px; margin-top: 4px; }
-      .mini .empty { font-size: 11px; padding: 12px 0; }
-      .score-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin: -5px 0 10px; }
-      .goal { margin-top: 12px; }
-      .goal .rail { margin: 6px 0; height: 5px; }
-      .goal-label { font-size: 11px; color: var(--muted); }
-      .native { margin-top: 22px; padding: 20px; background: #eaf0ea; border: 1px solid var(--line); border-radius: 14px; }
-      .sectionhead h2 { font-size: 23px; }
-      .chart { border-top: 3px solid var(--series, var(--line)); }
-      .charthead strong { font-size: 27px; letter-spacing: -0.7px; }
-      #activities { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      .activity, .activity:first-child { grid-template-columns: 1fr auto; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); gap: 8px 14px; }
-      .activity .when { grid-column: 1/-1; display: flex; justify-content: space-between; }
-      .activity > div:nth-child(2) { font-size: 16px; font-weight: 600; }
-      .activity .value { font-size: 18px; }
-      .activity .hr { grid-column: 1/-1; text-align: left; font-size: 12px; color: var(--muted); display: block; }
-      @media (max-width: 540px) {
-        .sync { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-        .hero .number { font-size: 54px; }
-        .metrics { gap: 10px; }
-        .metrics .card { padding: 14px 12px; }
-        .metric-title { align-items: flex-start; gap: 6px; }
-        .metric-title h3 { font-size: 12px; }
-        .metric-icon { width: 24px; height: 24px; padding: 4px; }
-        .metric-card .number { font-size: 30px; }
-        .metric-card .number small { font-size: 12px; }
-        .mini-caption { flex-wrap: wrap; gap: 0 6px; }
-        .sectionhead { flex-wrap: wrap; }
-        #activities { grid-template-columns: 1fr; }
-        .native { gap: 16px; padding: 16px; }
-        .native > div { flex: 1 1 120px; }
       }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <div class="brand">CIRQA<span>Garmin Connect</span></div>
+        <div class="brand">CIRQA<span>TRAINING COMPANION</span></div>
         <div class="sync">
           <span id="syncStatus">Checking data…</span
           ><button id="refresh" type="button">Sync now</button>
         </div>
       </header>
-      <nav aria-label="Dashboard sections" style="margin:18px 0">
-        <a href="/training">Training load, insights &amp; workout planner →</a>
+      <nav class="app-nav" aria-label="Main navigation">
+        <a href="/" aria-current="page"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10" /></svg
+          >Today</a
+        ><a href="/training"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 17 4-6 4 2 3-6M3 17h3m8-10h3v3M11 4h2" /></svg
+          >Training</a
+        ><a href="/activities"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 4h14v17H5zM8 8h8M8 12h8M8 16h5" /></svg
+          >Activities</a
+        >
       </nav>
       <div id="error" class="error" role="alert" hidden></div>
       <div id="content" aria-live="polite">
@@ -580,48 +1028,73 @@
         ["sleep_awake_s", "Awake", "#d8b481"],
       ];
       const seriesColor = (k) =>
-        ({ resting_hr: "#b47a56", stress_avg: "#a97825",
-          hrv_last_night: "#527ca4", respiration_avg: "#857ba8",
-          spo2_avg: "#527ca4", sleep_hours: "#527ca4",
-          active_calories: "#a97825" })[k] || "#34705d";
+        ({
+          resting_hr: "#b47a56",
+          stress_avg: "#a97825",
+          hrv_last_night: "#527ca4",
+          respiration_avg: "#857ba8",
+          spo2_avg: "#527ca4",
+          sleep_hours: "#527ca4",
+          active_calories: "#a97825",
+        })[k] || "#34705d";
       function metricIcon(k) {
         const paths = {
           resting_hr: "M3 12h4l3-7 4 14 3-7h4",
           hrv_last_night: "M3 12h3l3-5 3 10 3-10 3 5h3",
           stress_avg: "M4 17V9m5 8V5m6 12v-7m5 7V3",
           steps: "M7 3v7m-2 0h4v5H5zm12-1v7m-2 0h4v5h-4z",
-          respiration_avg: "M12 3v9m0-4C5 5 3 11 3 17c0 4 7 3 7-1v-4m2-4c7-3 9 3 9 9 0 4-7 3-7-1v-4",
-          active_calories: "M13 3c2 6-5 6-2 10 2 0 3-2 3-4 7 7 4 12-2 12S3 15 7 10c0 3 2 3 2 3-2-5 4-7 4-10",
+          respiration_avg:
+            "M12 3v9m0-4C5 5 3 11 3 17c0 4 7 3 7-1v-4m2-4c7-3 9 3 9 9 0 4-7 3-7-1v-4",
+          active_calories:
+            "M13 3c2 6-5 6-2 10 2 0 3-2 3-4 7 7 4 12-2 12S3 15 7 10c0 3 2 3 2 3-2-5 4-7 4-10",
           spo2_avg: "M12 3C9 8 5 12 5 16a7 7 0 0 0 14 0c0-4-4-8-7-13z",
         };
         return `<span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k] || paths.hrv_last_night}"/></svg></span>`;
       }
       function miniTrend(k, title, unit, bars = false) {
         const end = overview.today || days.at(-1)?.date;
-        if (!end) return '<div class="mini"><div class="empty">No recorded history yet.</div></div>';
+        if (!end)
+          return '<div class="mini"><div class="empty">No recorded history yet.</div></div>';
         const endMs = Date.parse(end + "T12:00:00Z");
         const byDate = new Map(days.map((d) => [d.date, d]));
         const rows = Array.from({ length: 7 }, (_, i) => {
-          const date = new Date(endMs - (6 - i) * 86400000).toISOString().slice(0, 10);
+          const date = new Date(endMs - (6 - i) * 86400000)
+            .toISOString()
+            .slice(0, 10);
           return { date, value: byDate.get(date)?.[k] };
         });
         const observed = rows.filter((d) => valid(d.value));
         const caption = `<div class="mini-caption"><span>${esc(dateLabel(rows[0].date))}–${esc(dateLabel(end))}</span><span>${observed.length}/7 days recorded</span></div>`;
-        if (!observed.length) return `<div class="mini"><div class="empty">No readings in the last 7 days.</div>${caption}</div>`;
-        const fixed = ["training_readiness", "body_battery_current", "sleep_score", "stress_avg"].includes(k);
-        const min = bars || fixed ? 0 : Math.max(0, Math.min(...observed.map((d) => d.value)) - 2);
-        const max = fixed ? 100 : Math.max(min + 1, ...observed.map((d) => d.value));
+        if (!observed.length)
+          return `<div class="mini"><div class="empty">No readings in the last 7 days.</div>${caption}</div>`;
+        const fixed = [
+          "training_readiness",
+          "body_battery_current",
+          "sleep_score",
+          "stress_avg",
+        ].includes(k);
+        const min =
+          bars || fixed
+            ? 0
+            : Math.max(0, Math.min(...observed.map((d) => d.value)) - 2);
+        const max = fixed
+          ? 100
+          : Math.max(min + 1, ...observed.map((d) => d.value));
         const x = (i) => 12 + i * 38;
         const y = (v) => 49 - ((v - min) / (max - min)) * 40;
         let svg = '<path d="M12 50H240" stroke="currentColor" opacity=".15"/>';
         let prev = null;
         rows.forEach((d, i) => {
-          if (!valid(d.value)) { prev = null; return; }
+          if (!valid(d.value)) {
+            prev = null;
+            return;
+          }
           const label = `${dateLabel(d.date)}: ${num(d.value, 1)} ${unit}`;
           if (bars) {
             svg += `<rect x="${x(i) - 9}" y="${y(d.value)}" width="18" height="${Math.max(1, 50 - y(d.value))}" rx="3" fill="currentColor" opacity="${i === 6 ? 1 : 0.5}"><title>${esc(label)}</title></rect>`;
           } else {
-            if (prev !== null) svg += `<path d="M${x(prev)} ${y(rows[prev].value)}L${x(i)} ${y(d.value)}" fill="none" stroke="currentColor" stroke-width="2"/>`;
+            if (prev !== null)
+              svg += `<path d="M${x(prev)} ${y(rows[prev].value)}L${x(i)} ${y(d.value)}" fill="none" stroke="currentColor" stroke-width="2"/>`;
             svg += `<circle cx="${x(i)}" cy="${y(d.value)}" r="${i === 6 ? 4 : 2.5}" fill="currentColor"><title>${esc(label)}</title></circle>`;
             prev = i;
           }
@@ -630,8 +1103,13 @@
       }
       function metric(k, title, unit, detail = "") {
         const d = latest(k);
-        const goal = k === "steps" && valid(d?.steps_goal) && d.steps_goal > 0 && valid(d.steps)
-          ? `<div class="goal"><div class="goal-label">${num((d.steps / d.steps_goal) * 100)}% of Garmin step goal · ${esc(stamp(d))}</div>${rail((d.steps / d.steps_goal) * 100)}</div>` : "";
+        const goal =
+          k === "steps" &&
+          valid(d?.steps_goal) &&
+          d.steps_goal > 0 &&
+          valid(d.steps)
+            ? `<div class="goal"><div class="goal-label">${num((d.steps / d.steps_goal) * 100)}% of Garmin step goal · ${esc(stamp(d))}</div>${rail((d.steps / d.steps_goal) * 100)}</div>`
+            : "";
         return `<article class="card metric-card" style="--series:${seriesColor(k)}"><div class="metric-title">${metricIcon(k)}<h3>${title}</h3></div><div class="number">${num(d?.[k], k === "spo2_avg" || k === "respiration_avg" ? 1 : 0)}<small>${unit}</small></div><div class="note">${esc(stamp(d))}</div>${detail ? `<div class="note">${detail}</div>` : ""}${goal}${miniTrend(k, title, unit, ["steps", "active_calories"].includes(k))}</article>`;
       }
       function render() {
@@ -667,15 +1145,21 @@
           ["hrv_last_night", "HRV"],
         ];
         const missing = tracked.filter(([k]) => !latest(k)).map(([, t]) => t);
+        const opened = [...document.querySelectorAll("details[id][open]")].map(
+          (el) => el.id,
+        );
         $("content").innerHTML =
-          `<h1>Your daily overview</h1><p class="sub">${esc(overview.today ? dateLabel(overview.today) : "")} · Latest available readings, dated individually. Daily totals are partial until the day ends.</p>
+          `<h1>Today</h1><p class="sub">${esc(overview.today ? dateLabel(overview.today) : "")} · Garmin Connect · Individual reading times below</p>
  <section class="hero" aria-label="Daily Garmin metrics">
- <article class="card primary"><div class="eyebrow">Garmin training readiness</div><div class="number">${num(r?.training_readiness)}<small>/ 100</small></div><div class="state">${esc(words(r?.training_readiness_level))}</div>${rail(r?.training_readiness)}<div class="note">${esc(recorded(r, "readiness_updated_at"))} · recorded score</div>${valid(r?.recovery_time_hours) ? `<div class="pair"><span>Recovery time</span><b>${num(r.recovery_time_hours, 1)} h</b></div>` : ""}</article>
- <article class="card"><div class="eyebrow">Body Battery</div><div class="number">${num(bodyVal)}<small>/ 100</small></div><div class="note">Latest recorded level · ${esc(recorded(b, "body_battery_updated_at"))}</div>${rail(bodyVal)}<div class="pair"><span>Daily high <b>${num(b?.body_battery_high)}</b></span><span>Daily low <b>${num(b?.body_battery_low)}</b></span></div></article>
- <article class="card"><div class="eyebrow">Sleep</div><div class="number" style="font-size:38px">${hours(s?.sleep_seconds)}</div><div class="pair"><span>${esc(stamp(s))}</span><span>Score <b>${num(s?.sleep_score)} / 100</b></span></div>${sleepTotal ? `<div class="stagebar">${sleepParts.map(([k, t, c]) => `<div style="width:${(s[k] / sleepTotal) * 100}%;background:${c}" title="${t}: ${hours(s[k])}"></div>`).join("")}</div><div class="stages">${sleepParts.map(([k, t, c]) => `<div><span style="background:${c}"></span>${t} <b>${hours(s[k])}</b></div>`).join("")}</div><div class="note" style="margin-top:8px">Awake time is separate from time asleep.</div>` : '<div class="empty">No sleep stages available.</div>'}</article></section>
+ <article class="card primary"><div class="eyebrow">TRAINING READINESS · GARMIN</div><div class="readiness-ring"><svg viewBox="0 0 140 140" aria-hidden="true"><circle cx="70" cy="70" r="56" fill="none" stroke="#33435b" stroke-width="9"/>${valid(r?.training_readiness) ? `<circle cx="70" cy="70" r="56" fill="none" stroke="#d3f56a" stroke-width="9" stroke-linecap="round" stroke-dasharray="351.86" stroke-dashoffset="${351.86 * (1 - Math.max(0, Math.min(100, r.training_readiness)) / 100)}" transform="rotate(-90 70 70)"/>` : ""}</svg><div class="readiness-value"><strong>${num(r?.training_readiness)}</strong><small>OUT OF 100</small></div></div><div class="readiness-meta"><div class="state">${esc(words(r?.training_readiness_level)) || "Not recorded"}</div><div class="note">${esc(recorded(r, "readiness_updated_at"))}</div>${valid(r?.recovery_time_hours) ? `<div class="pair"><span>Recorded recovery time</span><b>${num(r.recovery_time_hours, 1)} hours</b></div>` : ""}</div></article>
+ <article class="card"><div class="eyebrow">BODY BATTERY</div><div class="number">${num(bodyVal)}<small>/ 100</small></div><div class="note">${esc(recorded(b, "body_battery_updated_at"))}</div>${rail(bodyVal)}<div class="pair"><span>High <b>${num(b?.body_battery_high)}</b></span><span>Low <b>${num(b?.body_battery_low)}</b></span></div></article>
+ <article class="card"><div class="eyebrow">TIME ASLEEP</div><div class="number sleep-number">${hours(s?.sleep_seconds)}</div><div class="pair"><span>${esc(stamp(s))}</span><span>Score <b>${num(s?.sleep_score)}</b></span></div>${sleepTotal ? `<div class="stagebar">${sleepParts.map(([k, t, c]) => `<div style="width:${(s[k] / sleepTotal) * 100}%;background:${c}" title="${t}: ${hours(s[k])}"></div>`).join("")}</div><details class="sleep-details"><summary>Sleep stages</summary><div class="stages">${sleepParts.map(([k, t, c]) => `<div><span style="background:${c}"></span>${t} <b>${hours(s[k])}</b></div>`).join("")}</div><p class="note">Awake time is not time asleep.</p></details>` : '<div class="note">No recorded sleep stages.</div>'}</article></section>
+ <a href="/training" class="train-link"><span><strong>Your HYROX training</strong><small>Suggested runs · Gym demand · Your week</small></span><span aria-hidden="true">→</span></a>
+ <details class="section disclosure" id="health-details"><summary>Health & daily movement</summary>
  <section class="metrics" aria-label="Health and movement">${metric("hrv_last_night", "Overnight HRV", "ms", h ? `${esc(words(h.hrv_status))}${valid(h.hrv_weekly_avg) ? ` · 7-day ${num(h.hrv_weekly_avg)} ms` : ""}${valid(h.hrv_baseline_low) && valid(h.hrv_baseline_high) ? ` · Garmin band ${num(h.hrv_baseline_low)}–${num(h.hrv_baseline_high)} ms` : ""}` : "")}${metric("resting_hr", "Resting heart rate", "bpm")}${metric("stress_avg", "Average stress", "/ 100")}${metric("steps", "Steps", "", valid(latest("steps")?.steps_goal) ? `Goal ${num(latest("steps").steps_goal)}` : "")}${latest("spo2_avg") ? metric("spo2_avg", "Pulse Ox", "%") : ""}${latest("respiration_avg") ? metric("respiration_avg", "Respiration", "brpm") : ""}${latest("active_calories") ? metric("active_calories", "Active calories", "kcal") : ""}</section>
- ${native || status ? `<section class="native" aria-label="More Garmin metrics">${status ? `<div><span class="note">Garmin training status</span><b>${esc(words(status.training_status))}</b><span class="note">${esc(stamp(status))}</span></div>` : ""}${native}</section>` : ""}
- <section class="section"><div class="sectionhead"><div><h2>Trends</h2><div class="note">Gaps mean no reading. Labels show recorded values.</div></div><div class="segments" aria-label="Chart range">${[7, 28, 90].map((n) => `<button type="button" data-range="${n}" aria-pressed="${range === n}">${n} days</button>`).join("")}</div></div><div id="charts" class="charts"></div></section>
+ </details>
+ ${native || status ? `<details class="section disclosure" id="native-details"><summary>More Garmin metrics</summary><section class="native" aria-label="More Garmin metrics">${status ? `<div><span class="note">Training status</span><b>${esc(words(status.training_status))}</b><span class="note">${esc(stamp(status))}</span></div>` : ""}${native}</section></details>` : ""}
+ <details class="section disclosure" id="trends-details"><summary>Trends & history</summary><div class="sectionhead"><div class="note">Recorded values. Gaps remain gaps.</div><div class="segments" aria-label="Chart range">${[7, 28, 90].map((n) => `<button type="button" data-range="${n}" aria-pressed="${range === n}">${n} days</button>`).join("")}</div></div><div id="charts" class="charts"></div></details>
  <section class="section"><div class="sectionhead"><h2>Recent activities</h2><a href="/activities" style="color:var(--green)">All activities &rarr;</a></div><div id="activities"></div><div class="note" style="margin-top:12px">Open a session for charts, laps and zones. Latest 6 sessions; all recordings remain in history.</div></section>
  ${missing.length ? `<details class="unavailable"><summary>Unavailable metrics: ${esc(missing.join(", "))}</summary><p>No readings returned in the stored history. Device support, settings and Garmin Connect uploads determine availability.</p></details>` : ""}`;
         document.querySelectorAll("[data-range]").forEach(
@@ -687,14 +1171,29 @@
             }),
         );
         renderCharts();
-        const heroCards = document.querySelectorAll(".hero .card");
-        [["training_readiness", "Training readiness", "/100", false],
-         ["body_battery_current", "Body Battery", "/100", false],
-         ["sleep_hours", "Time asleep", "h", true]].forEach(([key, title, unit, bars], i) => {
-          heroCards[i].insertAdjacentHTML("beforeend", miniTrend(key, title, unit, bars));
+        opened.forEach((id) => {
+          const element = $(id);
+          if (element) element.open = true;
         });
-        document.querySelectorAll(".hero .rail").forEach((el) =>
-          el.insertAdjacentHTML("afterend", '<div class="score-axis" aria-hidden="true"><span>0</span><span>50</span><span>100</span></div>'));
+        const heroCards = document.querySelectorAll(".hero .card");
+        [
+          ["training_readiness", "Training readiness", "/100", false],
+          ["body_battery_current", "Body Battery", "/100", false],
+          ["sleep_hours", "Time asleep", "h", true],
+        ].forEach(([key, title, unit, bars], i) => {
+          heroCards[i].insertAdjacentHTML(
+            "beforeend",
+            miniTrend(key, title, unit, bars),
+          );
+        });
+        document
+          .querySelectorAll(".hero .rail")
+          .forEach((el) =>
+            el.insertAdjacentHTML(
+              "afterend",
+              '<div class="score-axis" aria-hidden="true"><span>0</span><span>50</span><span>100</span></div>',
+            ),
+          );
         document.querySelectorAll("#charts .chart").forEach((el) => {
           const title = el.querySelector("h3")?.textContent;
           const spec = chartSpecs.find((s) => s[1] === title);
@@ -849,7 +1348,11 @@
         lastStatus = s;
         const running = syncPending || !!s.running;
         $("refresh").disabled = running || !!s.busy;
-        $("refresh").textContent = running ? "Syncing…" : s.busy ? "Activity syncing…" : "Sync now";
+        $("refresh").textContent = running
+          ? "Syncing…"
+          : s.busy
+            ? "Activity syncing…"
+            : "Sync now";
         const t = overview.last_sync?.finished_at;
         $("syncStatus").textContent = running
           ? "Updating from Garmin Connect…"
@@ -866,7 +1369,11 @@
         refreshing = true;
         try {
           const data = await get("/api/dashboard");
-          const signature = JSON.stringify([data.overview, data.days, data.activities]);
+          const signature = JSON.stringify([
+            data.overview,
+            data.days,
+            data.activities,
+          ]);
           overview = data.overview;
           days = data.days;
           activities = data.activities;
@@ -913,9 +1420,18 @@
         }
       }
       $("refresh").onclick = sync;
-      load().then((loaded) => { if (loaded) sync(); });
+      load().then((loaded) => {
+        if (loaded) sync();
+      });
       setInterval(() => {
-        if (!document.hidden && (hosting !== "cloud" || syncPending || lastStatus.running || Date.now() - lastLoaded >= 60000)) load();
+        if (
+          !document.hidden &&
+          (hosting !== "cloud" ||
+            syncPending ||
+            lastStatus.running ||
+            Date.now() - lastLoaded >= 60000)
+        )
+          load();
       }, 15000);
       setInterval(
         () => {
@@ -924,7 +1440,10 @@
         30 * 60 * 1000,
       );
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) load().then((loaded) => { if (loaded) sync(); });
+        if (!document.hidden)
+          load().then((loaded) => {
+            if (loaded) sync();
+          });
       });
     </script>
   </body>

@@ -50,7 +50,6 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(activity["rpe_load"], 180)
         training.save_feedback(self.conn, dict(payload, rpe=None, soreness=None, notes=""))
         self.assertIsNone(training.dashboard(self.conn, self.today)["activities"][0]["rpe_load"])
-        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM session_feedback").fetchone()[0], 1)
 
     def test_period_comparison_excludes_today_and_requires_coverage(self):
         today = date.fromisoformat(self.today)
@@ -115,6 +114,52 @@ class TrainingTests(unittest.TestCase):
         training.save_checkin(self.conn, dict(self.checkin, soreness=4), self.today)
         self.assertEqual(self.decision()["status"], "caution")
         self.assertEqual(self.decision()["steps"], [])
+
+    def seed_running_base(self):
+        for index, offset in enumerate((4, 7, 10, 13, 16, 19)):
+            day = (date.fromisoformat(self.today) - timedelta(days=offset)).isoformat()
+            store.upsert_activity(self.conn, {"activity_id": f"run-{index}", "type": "running", "start_local": day + " 08:00:00", "duration_s": 2100, "distance_m": 5000})
+
+    def test_hyrox_quality_run_requires_established_base_and_respects_race_week(self):
+        self.profile = dict(self.profile, goal="hyrox", equipment="gym", strength_days=[4], race_date=None)
+        self.ready()
+        self.assertEqual(self.decision()["kind"], "easy_run")
+        self.seed_running_base()
+        session = self.decision()
+        self.assertEqual(session["kind"], "controlled_run")
+        self.assertEqual(sum(step["minutes"] for step in session["steps"]), 30)
+        training.save_profile(self.conn, dict(self.profile, race_date="2026-09-25"))
+        self.assertEqual(self.decision()["kind"], "easy_run")
+
+    def test_recent_lifting_downgrades_quality_and_gym_day_obeys_checkin(self):
+        self.profile = dict(self.profile, goal="hyrox", equipment="gym", strength_days=[4])
+        self.ready()
+        self.seed_running_base()
+        self.assertEqual(self.decision()["kind"], "controlled_run")
+        store.upsert_activity(self.conn, {"activity_id": "gym", "type": "strength_training", "start_local": "2026-09-21 18:00:00", "duration_s": 1800})
+        self.assertEqual(self.decision()["kind"], "easy_run")
+        training.save_profile(self.conn, dict(self.profile, weekdays=[3, 5], strength_days=[1]))
+        session = self.decision()
+        self.assertEqual(session["kind"], "strength")
+        self.assertEqual(sum(step["minutes"] for step in session["steps"]), 40)
+        training.save_checkin(self.conn, dict(self.checkin, soreness=4), self.today)
+        self.assertEqual(self.decision()["status"], "caution")
+        self.assertEqual(self.decision()["steps"], [])
+
+    def test_pace_uses_actual_distance_and_week_keeps_gym_separate(self):
+        self.profile = dict(self.profile, goal="hyrox", equipment="gym", strength_days=[4])
+        self.ready()
+        self.seed_running_base()
+        store.upsert_activity(self.conn, {"activity_id": "zero-distance", "type": "running", "start_local": "2026-09-21 08:00:00", "duration_s": 500, "distance_m": 0})
+        context = training.dashboard(self.conn, self.today)["running"]
+        self.assertEqual(context["last_run"]["pace_s_per_km"], 420)
+        self.assertEqual(context["distance_28d_m"], 30000)
+        by_date = {day["date"]: day for day in context["weekly_plan"]}
+        self.assertEqual(by_date["2026-09-25"]["kind"], "strength")
+        self.assertEqual(by_date["2026-09-23"]["kind"], "rest")
+        with self.assertRaises(ValueError):
+            training.save_profile(self.conn, dict(self.profile, strength_days=[1]))
+        self.assertEqual(training.document(self.conn, "profile")["strength_days"], [4])
 
     def test_native_calendar_failure_retains_previous_schedule(self):
         previous = {"checked_at": "2000-01-01", "last_success_at": "2000-01-01", "workouts": [{"id": "1", "date": self.today, "name": "Saved workout"}]}

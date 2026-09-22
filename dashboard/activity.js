@@ -54,6 +54,32 @@ let activities = [],
   selection = [0, 1000],
   comparisonSequence = 0,
   cooldownTimer;
+let sportFilter = "all";
+const runTypes = new Set([
+  "running",
+  "treadmill_running",
+  "trail_running",
+  "indoor_running",
+  "track_running",
+  "virtual_run",
+  "ultra_run",
+]);
+const strengthTypes = new Set([
+  "strength_training",
+  "strength",
+  "functional_strength_training",
+  "crossfit",
+  "hiit",
+]);
+const isRun = (a) => runTypes.has(a.type);
+const recordedPace = (a) =>
+  isRun(a) &&
+  valid(a.distance_m) &&
+  a.distance_m > 0 &&
+  valid(a.duration_s) &&
+  a.duration_s > 0
+    ? (a.duration_s * 1000) / a.distance_m
+    : null;
 const aid = new URLSearchParams(location.search).get("id");
 async function request(url, post = false) {
   const r = await fetch(url, {
@@ -83,7 +109,9 @@ async function loadDetail(
     !result.fetch.cooldown_seconds &&
     !result.fetch.busy
   ) {
-    notify("Downloading native Garmin streams… Keep this page open until the refresh finishes.");
+    notify(
+      "Downloading native Garmin streams… Keep this page open until the refresh finishes.",
+    );
     result = await request(
       `/api/activity/${encodeURIComponent(id)}/fetch`,
       true,
@@ -104,12 +132,15 @@ function activityOption(a) {
 }
 function history() {
   const query = $("search").value.trim().toLowerCase();
-  const rows = activities.filter((a) =>
-    [a.name, a.type, a.start_local, a.start_iso]
-      .join(" ")
-      .replaceAll("_", " ")
-      .toLowerCase()
-      .includes(query),
+  const rows = activities.filter(
+    (a) =>
+      (sportFilter === "all" ||
+        (sportFilter === "running" ? isRun(a) : strengthTypes.has(a.type))) &&
+      [a.name, a.type, a.start_local, a.start_iso]
+        .join(" ")
+        .replaceAll("_", " ")
+        .toLowerCase()
+        .includes(query),
   );
   $("history-count").textContent =
     `${rows.length} of ${activities.length} stored activities`;
@@ -117,7 +148,7 @@ function history() {
     rows
       .map(
         (a) =>
-          `<a class="history-row" href="/activity?id=${encodeURIComponent(a.activity_id)}"><div class="when"><small>${esc(dateLabel(a.start_local || a.start_iso))}</small></div><div>${esc(a.name || words(a.type))} →<br><small>${esc(words(a.type))}</small></div><div class="right">${duration(a.duration_s)}</div><div class="right hr">${num(a.avg_hr)} <small>bpm</small></div></a>`,
+          `<a class="history-row" href="/activity?id=${encodeURIComponent(a.activity_id)}"><div class="when"><small>${esc(dateLabel(a.start_local || a.start_iso))}</small></div><div class="session-name"><span class="sport-mark ${isRun(a) ? "running" : strengthTypes.has(a.type) ? "strength" : ""}" aria-hidden="true">${isRun(a) ? "↗" : strengthTypes.has(a.type) ? "+" : "•"}</span><span>${esc(a.name || words(a.type))}<small>${esc(words(a.type))} · ${duration(a.duration_s)}${valid(a.distance_m) ? " · " + num(a.distance_m / 1000, 2) + " km" : ""}</small></span></div><div class="right">${isRun(a) ? duration(recordedPace(a)) : duration(a.duration_s)}<small>${isRun(a) ? "/km · avg" : "duration"}</small></div><div class="right hr">${num(a.avg_hr)} <small>bpm</small></div></a>`,
       )
       .join("") || '<p class="empty">No matching activities.</p>';
 }
@@ -134,6 +165,7 @@ function localSummary(a) {
     name: a.name || words(a.type),
     type: a.type,
     start_local: a.start_local || a.start_iso,
+    pace_sport: isRun(a),
     stats: fields
       .filter(([k]) => valid(a[k]))
       .map(([k, key, label, unit, format]) => ({
@@ -142,7 +174,20 @@ function localSummary(a) {
         unit,
         format,
         value: a[k],
-      })),
+      }))
+      .concat(
+        recordedPace(a) === null
+          ? []
+          : [
+              {
+                key: "averageSpeed",
+                label: "Average recorded pace",
+                unit: "/km",
+                format: "pace",
+                value: recordedPace(a),
+              },
+            ],
+      ),
     streams: [],
     axis: [],
     laps: [],
@@ -178,10 +223,9 @@ function render(result) {
   $("garmin").hidden = !current.garmin_url;
   if (current.garmin_url) $("garmin").href = current.garmin_url;
   const priority = [
-    "duration",
-    "distance",
-    "averageSpeed",
-    "averageHR",
+    ...(current.pace_sport
+      ? ["averageSpeed", "distance", "duration", "averageHR"]
+      : ["duration", "distance", "averageSpeed", "averageHR"]),
     "maxHR",
     "calories",
   ];
@@ -190,7 +234,7 @@ function render(result) {
     .filter(Boolean)
     .slice(0, 4);
   const card = (s) =>
-    `<div class="stat"><div class="note">${esc(s.label)}</div><div class="value">${esc(formatted(s))}<small>${esc(unit(s))}</small></div></div>`;
+    `<div class="stat${s.format === "pace" ? " pace-stat" : ""}"><div class="note">${esc(s.label)}</div><div class="value">${esc(formatted(s))}<small>${esc(unit(s))}</small></div></div>`;
   $("stats").innerHTML = primary.map(card).join("");
   const extra = current.stats.filter((s) => !primary.includes(s));
   $("stats-more").innerHTML = extra.map(card).join("");
@@ -483,6 +527,17 @@ $("browse").onchange = () => {
     location.href = "/activity?id=" + encodeURIComponent($("browse").value);
 };
 $("search").oninput = history;
+document.querySelectorAll("[data-sport]").forEach((button) =>
+  button.addEventListener("click", () => {
+    sportFilter = button.dataset.sport;
+    document
+      .querySelectorAll("[data-sport]")
+      .forEach((item) =>
+        item.setAttribute("aria-pressed", String(item === button)),
+      );
+    history();
+  }),
+);
 $("time-axis").onclick = () => {
   axis = "time_s";
   charts();
@@ -565,6 +620,7 @@ $("compare").onchange = async () => {
       activities.map(activityOption).join("");
     if (!aid) {
       $("history").hidden = false;
+      document.querySelector(".browser").hidden = true;
       $("status").textContent = "";
       history();
       return;

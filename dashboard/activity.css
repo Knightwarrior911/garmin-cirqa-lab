@@ -1,11 +1,12 @@
 :root {
-  --bg: #f5f6f3;
+  --bg: #f3f6fb;
   --paper: #fff;
-  --ink: #202b28;
-  --muted: #64716b;
-  --line: #dfe5df;
-  --green: #34705d;
-  --blue: #527ca4;
+  --ink: #14213b;
+  --muted: #56657a;
+  --line: #e1e7ef;
+  --green: #246bfd;
+  --blue: #246bfd;
+  color-scheme: light;
 }
 * {
   box-sizing: border-box;
@@ -18,74 +19,118 @@ body {
   background: var(--bg);
   color: var(--ink);
   font:
-    14px/1.5 "Segoe UI",
-    system-ui,
+    14px/1.5 Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     sans-serif;
 }
 main {
-  max-width: 1180px;
+  max-width: 1160px;
   margin: auto;
-  padding: 32px 32px 48px;
+  padding: 24px 32px 48px;
 }
 a {
-  color: var(--green);
+  color: var(--blue);
+  text-underline-offset: 4px;
 }
 header,
 .heading,
 .sectionhead,
 .browser {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 20px;
 }
 header {
-  border-bottom: 1px solid var(--line);
   padding-bottom: 22px;
 }
 .brand {
-  font-size: 21px;
-  font-weight: 650;
-  letter-spacing: -0.6px;
+  font-size: 25px;
+  font-weight: 850;
+  letter-spacing: -1px;
   text-decoration: none;
   color: var(--ink);
+  margin-right: auto;
 }
 .brand span {
-  font-size: 13px;
-  font-weight: 400;
+  display: block;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 1.5px;
   color: var(--muted);
-  letter-spacing: 0;
-  margin-left: 12px;
+  margin-top: 3px;
+}
+.header-link {
+  font-size: 12px;
+  text-decoration: none;
+}
+.app-nav {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+  margin-bottom: 25px;
+}
+.app-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 100px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 650;
+}
+.app-nav a[aria-current="page"] {
+  background: #e2ebff;
+  color: #154dc3;
+}
+.app-nav svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .heading {
-  margin: 30px 0 22px;
+  margin: 28px 0 22px;
 }
 h1 {
-  font-size: 30px;
-  font-weight: 550;
-  letter-spacing: -0.8px;
+  font-size: 36px;
+  font-weight: 750;
+  letter-spacing: -1.4px;
+  line-height: 1.15;
   margin: 0;
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: 19px;
-  letter-spacing: -0.3px;
+  font-size: 23px;
+  letter-spacing: -0.7px;
+  line-height: 1.3;
   margin: 0;
-  font-weight: 600;
+  font-weight: 650;
 }
 .eyebrow,
 .note,
 footer {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 .eyebrow {
-  margin: 0 0 4px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 10px;
+  letter-spacing: 1.3px;
+  font-weight: 650;
+  margin: 0 0 8px;
 }
 .note {
-  margin: 6px 0 12px;
+  margin: 8px 0 12px;
 }
 button,
 select,
@@ -95,17 +140,19 @@ input {
 }
 button,
 .button {
-  border: 1px solid var(--line);
-  border-radius: 8px;
   background: white;
-  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 16px;
   cursor: pointer;
   text-decoration: none;
-  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 650;
+  min-height: 44px;
 }
 button:hover,
 .button:hover {
-  background: #edf2ed;
+  background: #e9effb;
 }
 button:disabled {
   opacity: 0.5;
@@ -114,8 +161,9 @@ button:disabled {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 3px solid var(--blue);
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #729bff;
   outline-offset: 3px;
 }
 select,
@@ -123,14 +171,16 @@ input[type="search"] {
   display: block;
   width: 100%;
   max-width: 100%;
-  padding: 9px 12px;
+  padding: 13px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
-  margin-top: 5px;
+  border-radius: 13px;
+  background: #fff;
+  margin-top: 7px;
+  font-size: 14px;
+  min-height: 46px;
 }
 label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   min-width: 0;
 }
@@ -142,60 +192,106 @@ label {
   max-width: 700px;
 }
 .browser a {
+  font-size: 11px;
   white-space: nowrap;
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 .stat,
 .card {
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 20px;
+  border: 0;
+  border-radius: 22px;
+  padding: 24px;
   min-width: 0;
 }
-.stat:nth-child(-n + 4) {
-  border-top: 3px solid var(--green);
+.stat .note {
+  margin-top: 0;
 }
 .stat .value {
-  font-size: 27px;
-  letter-spacing: -0.7px;
+  font-size: 38px;
+  letter-spacing: -1.8px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  margin-top: 5px;
+  margin-top: 10px;
+  line-height: 1.2;
 }
 .stat .value small {
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0;
   color: var(--muted);
-  margin-left: 4px;
+  margin-left: 5px;
+  font-weight: 400;
+}
+#stats .stat:nth-child(2) {
+  background: #e6edff;
+}
+#stats .stat:nth-child(3) {
+  background: #e8e2ff;
+}
+#stats .stat:nth-child(4) {
+  background: #e0f3ec;
+}
+#stats .pace-stat {
+  background: #12213b;
+  color: #d3f56a;
+}
+#stats .pace-stat .note,
+#stats .pace-stat .value small {
+  color: #c1cfe2;
 }
 .section {
   margin-top: 28px;
 }
 .sectionhead {
-  margin: 16px 0;
+  margin: 18px 0;
   flex-wrap: wrap;
 }
 .card > .sectionhead {
   margin-top: 0;
 }
-.segments {
-  display: flex;
-  gap: 3px;
-  background: #e8ede7;
-  padding: 3px;
-  border-radius: 8px;
+summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
 }
-.segments button {
+#more-summary {
+  margin: 20px 0;
+}
+#stats-more {
+  margin-top: 16px;
+}
+.segments,
+.sport-filters {
+  display: flex;
+  gap: 4px;
+  background: #e7edf7;
+  border-radius: 13px;
+  padding: 4px;
+}
+.segments button,
+.sport-filters button {
   border: 0;
   background: none;
+  min-height: 36px;
+  padding: 7px 13px;
+  font-size: 11px;
 }
-.segments button[aria-pressed="true"] {
+.segments button[aria-pressed="true"],
+.sport-filters button[aria-pressed="true"] {
   background: white;
-  box-shadow: 0 1px 3px #0001;
+  color: #174eae;
+}
+.sport-filters {
+  width: fit-content;
+  margin-bottom: 24px;
+}
+.sport-filters button {
+  font-size: 12px;
+  padding: 9px 18px;
 }
 .toggles {
   display: flex;
@@ -209,7 +305,7 @@ label {
   gap: 5px;
 }
 .toggles input {
-  accent-color: var(--green);
+  accent-color: var(--blue);
 }
 #charts svg {
   display: block;
@@ -225,9 +321,9 @@ svg text {
 }
 .sample {
   min-height: 55px;
-  padding: 10px 12px;
-  background: var(--bg);
-  border-radius: 8px;
+  padding: 12px 16px;
+  background: #edf2fb;
+  border-radius: 12px;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -247,7 +343,7 @@ svg text {
 .selection input {
   display: block;
   width: 100%;
-  accent-color: var(--green);
+  accent-color: var(--blue);
 }
 .columns {
   display: grid;
@@ -268,14 +364,14 @@ svg text {
 }
 .zone .bar {
   height: 9px;
-  background: #edf1ed;
-  border-radius: 5px;
+  background: #e9eef7;
+  border-radius: 6px;
   overflow: hidden;
 }
 .zone .bar i {
   display: block;
   height: 100%;
-  border-radius: 5px;
+  border-radius: 6px;
 }
 .zone .amount {
   text-align: right;
@@ -286,7 +382,7 @@ svg text {
   height: 210px;
   width: 100%;
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .table-wrap {
   overflow: auto;
@@ -295,7 +391,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: 12px;
 }
 th,
 td {
@@ -309,7 +405,7 @@ td:first-child {
   text-align: left;
 }
 th {
-  font-weight: 550;
+  font-weight: 600;
   color: var(--muted);
 }
 thead th {
@@ -321,39 +417,92 @@ thead th {
 #comparison th a {
   display: block;
 }
-#notices {
-  padding-left: 2px;
-}
 #notices p {
-  margin: 6px 0;
+  margin: 7px 0;
+  font-size: 11px;
+}
+#history-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
 }
 .history-row {
   display: grid;
-  grid-template-columns: 165px 1fr 95px 95px;
-  gap: 16px;
-  padding: 16px 6px;
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: 130px 1fr 95px 85px;
+  gap: 18px;
+  align-items: center;
+  padding: 20px 24px;
+  background: white;
+  border-radius: 19px;
   text-decoration: none;
   color: var(--ink);
 }
 .history-row:hover {
-  background: #edf2ed;
+  background: #e7eefb;
 }
 .history-row small {
   color: var(--muted);
+  font-size: 10px;
 }
 .history-row .right {
   text-align: right;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.history-row .right small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.history-row .hr {
+  font-size: 14px;
+}
+.session-name {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.session-name small {
+  display: block;
+  font-weight: 400;
+  margin-top: 4px;
+}
+.sport-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #e7edf7;
+  color: #687891;
+  font-size: 24px;
+  font-weight: 400;
+}
+.sport-mark.running {
+  background: #e4edff;
+  color: #246bfd;
+}
+.sport-mark.strength {
+  background: #ebe5ff;
+  color: #8254bb;
 }
 #status:not(:empty) {
   padding: 12px 16px;
-  background: #e8eee8;
-  border-radius: 8px;
+  background: #e8effa;
+  border-radius: 12px;
+  font-size: 11px;
 }
 footer {
   margin-top: 36px;
   border-top: 1px solid var(--line);
   padding-top: 18px;
+  font-size: 10px;
 }
 .empty {
   padding: 22px 0;
@@ -363,34 +512,90 @@ footer {
   max-width: 720px;
 }
 #compare-status {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
-@media (max-width: 750px) {
+@media (max-width: 760px) {
   main {
-    padding: 20px 16px 32px;
+    padding: 20px 20px calc(98px + env(safe-area-inset-bottom));
+  }
+  header {
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+  .brand {
+    font-size: 23px;
   }
   .brand span {
-    display: none;
+    font-size: 8px;
+    letter-spacing: 1.1px;
+  }
+  .header-link {
+    font-size: 10px;
+  }
+  header > button {
+    font-size: 10px !important;
+    padding: 7px !important;
+    min-height: 34px;
+  }
+  .app-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    margin: 0;
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
+    background: #ffffffed;
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--line);
+    border-bottom: 0;
+    justify-content: space-around;
+  }
+  .app-nav a {
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 10px;
+    padding: 6px 4px;
+    border-radius: 14px;
+    max-width: 110px;
+  }
+  .app-nav svg {
+    width: 21px;
+    height: 21px;
   }
   .heading {
     align-items: start;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    margin: 26px 0 20px;
   }
   h1 {
-    font-size: 26px;
+    font-size: 30px;
+    letter-spacing: -1px;
+  }
+  h2 {
+    font-size: 21px;
   }
   .stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
   .stat,
   .card {
-    padding: 16px;
+    padding: 18px;
+    border-radius: 19px;
   }
   .stat .value {
-    font-size: 24px;
+    font-size: 31px;
+    letter-spacing: -1.3px;
+  }
+  .stat .value small {
+    font-size: 10px;
+  }
+  .stat .note {
+    font-size: 10px;
   }
   .columns {
     grid-template-columns: 1fr;
@@ -406,8 +611,10 @@ footer {
     gap: 10px;
   }
   .history-row {
-    grid-template-columns: 1fr 75px;
-    gap: 4px 10px;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    gap: 9px 10px;
+    padding: 17px 16px;
+    border-radius: 17px;
   }
   .history-row .when {
     grid-column: 1/-1;
@@ -415,14 +622,57 @@ footer {
   .history-row .hr {
     display: none;
   }
+  .history-row .right {
+    font-size: 20px;
+  }
+  .session-name {
+    font-size: 12px;
+    gap: 10px;
+  }
+  .sport-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    font-size: 21px;
+  }
+  .session-name small {
+    font-size: 9px;
+  }
   .browser {
     gap: 10px;
   }
   .zone {
-    grid-template-columns: 80px 1fr 85px;
-    gap: 8px;
+    grid-template-columns: 70px 1fr 70px;
+    gap: 6px;
+    font-size: 11px;
   }
   .toggles {
     gap: 10px;
+  }
+  .sport-filters {
+    width: 100%;
+    gap: 0;
+  }
+  .sport-filters button {
+    flex: 1;
+    padding: 9px 8px;
+    font-size: 11px;
+  }
+  select,
+  input[type="search"] {
+    font-size: 16px;
+  }
+  .note {
+    font-size: 10px;
+  }
+  .sample {
+    font-size: 11px;
+  }
+  .button {
+    font-size: 11px;
+  }
+  .segments button {
+    padding: 7px 10px;
+    font-size: 10px;
   }
 }

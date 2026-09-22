@@ -1,14 +1,14 @@
 # Dashboard design
 
-Light neutral background, white metric surfaces, a deep-green readiness panel and pale green/blue Body Battery and sleep panels. Data colors remain consistent across icons, card accents and charts. System font and inline SVG; no remote fonts, icon packages, gradients, animations or decorative gauges.
+Google Health's compact metric hierarchy and Garmin watch glanceability are the design references, not copied branding. Light blue-neutral background, white surfaces, navy instrument panels, lime readiness/session accents, mint Body Battery and lavender sleep. Strong numeric hierarchy, system fonts and inline SVG; no remote assets, gradients or marketing hero copy. A readiness ring displays only Garmin's actual bounded score, not invented progress.
 
 ## Hierarchy
 
-- Header: CIRQA / Garmin Connect, last successful sync, Sync now.
-- Three primary panels: native training readiness, Body Battery, sleep with labeled stages.
-- Compact health/movement grid, followed by supported Garmin training metrics.
-- Two-column chart layout on desktop; single column on smaller screens.
-- Six activity cards in two columns on desktop and one on mobile, linking to dedicated detail pages. Keep deep activity analysis off the homepage.
+- Compact header with CIRQA, sync state and primary action. Today / Training / Activities navigation is persistent at the bottom on mobile and inline on desktop.
+- Native readiness instrument plus compact Body Battery and sleep tiles, with dated real mini trends. Sleep stages expand on demand.
+- A direct HYROX training link and compact recent activity rows. Health/movement, additional native measurements and large historical charts sit behind labeled disclosures.
+- Detailed charts remain two columns on desktop, one on mobile; range changes preserve open overview sections.
+- Activity history has All / Running / Strength filters and search. Running rows expose average pace when real recording data supports it.
 
 ## Data visualization
 
@@ -29,7 +29,7 @@ Refresh controls are keyboard accessible. Keep a selected chart range across ref
 
 ## Activity detail surface
 
-Four primary native statistics, expandable additional values, then aligned recording charts. Reuse the homepage palette and spacing. All chart panels share a time/distance axis, selection window and hover cursor. SVG dimensions follow the container so labels remain readable on mobile.
+Up to four primary native statistics, with running pace first when available, expandable additional values, then aligned recording charts. Reuse the homepage palette and spacing. Pace occupies a navy/lime tile. Local-summary fallback can compute recorded average pace from actual distance and timer duration but never creates a chart. All chart panels share a time/distance axis, selection window and hover cursor. SVG dimensions follow the container.
 
 Pace is positioned on an equal-speed scale to preserve near-stationary samples without flattening the moving portions; exact pace values remain available on hover. Nonnegative metrics never have negative axis labels. Do not connect missing readings or gaps longer than 30 seconds.
 
@@ -39,4 +39,6 @@ Native zones, laps, typed intervals, strength sets and an optional local GPS tra
 
 Keep load, comparisons and the planner on `/training`, linked from overview and activity detail. Native Garmin load, native acute load and optional session-RPE occupy separate cards with independent units. Unknown values use an em dash with accessible “Unavailable” text; valid zero remains numeric. Calendar load bars retain unknown gaps, mark partial totals, and provide a recorded-value table.
 
-Display a decision's source, policy version, reasons, steps and limitations together. Forms must not assume a goal, equipment, daily symptoms or exercise loads. Preserve unsaved entries across period changes and reads; confirm before discarding session feedback. Save errors remain actionable without clearing inputs. Show 12 recent session cards initially, with an explicit expansion control. Native calendar status remains separate from CIRQA decisions and labels the distinction from watch suggestions.
+The training workspace separates Today / Your week / Load & trends. Today's session is a navy panel with demand, effort target and numbered warm-up/main/cool-down steps. Recorded running pace and 28-day running volume are adjacent summaries. Source, reasons and limitations remain available without repeating paragraphs in the feed. The week combines running and gym days; its future entries are intentions, not recovery clearance.
+
+Preferences, daily check-in and session feedback use labeled native dialogs, with focus containment and inline errors. HYROX/running/gym may be prefilled from the owner's stated intent, but nothing is persisted until explicit save; availability, experience, symptoms and exercise loads are never invented. Preserve unsaved entries across reads and dialog closes. Show 12 recent session cards initially in the load view, with an expansion control. Native calendar status remains separate from CIRQA's planner and watch suggestions.

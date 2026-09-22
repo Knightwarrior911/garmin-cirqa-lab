@@ -11,7 +11,9 @@ import os
 from statistics import median
 from zoneinfo import ZoneInfo
 
-POLICY = "1"
+POLICY = "2"
+RUN_TYPES = frozenset(("running", "treadmill_running", "trail_running", "indoor_running", "track_running", "virtual_run", "ultra_run"))
+STRENGTH_TYPES = frozenset(("strength_training", "strength", "functional_strength_training", "crossfit", "hiit"))
 
 
 def finite(value):
@@ -50,9 +52,14 @@ def save_document(conn, kind, value):
 
 
 def save_profile(conn, payload):
-    object_fields(payload, ("goal", "sport", "weekdays", "minutes", "experience", "equipment", "routine"))
+    if not isinstance(payload, dict):
+        raise ValueError("Supply a training profile.")
+    payload = dict(payload)
+    payload.setdefault("strength_days", [])
+    payload.setdefault("race_date", None)
+    object_fields(payload, ("goal", "sport", "weekdays", "minutes", "experience", "equipment", "routine", "strength_days", "race_date"))
     for key, options in {
-        "goal": ("general_fitness", "endurance", "strength"),
+        "goal": ("general_fitness", "endurance", "strength", "hyrox"),
         "sport": ("walking", "running", "cycling", "strength"),
         "experience": ("beginner", "regular"),
         "equipment": ("none", "bike", "gym"),
@@ -65,6 +72,25 @@ def save_profile(conn, payload):
     weekdays = [bounded(day, 0, 6, "Weekday", True) for day in weekdays]
     if len(set(weekdays)) != len(weekdays):
         raise ValueError("Training days must not repeat.")
+    strength_days = payload["strength_days"]
+    if not isinstance(strength_days, list) or len(strength_days) > 7:
+        raise ValueError("Choose up to seven strength days.")
+    strength_days = [bounded(day, 0, 6, "Strength weekday", True) for day in strength_days]
+    if len(set(strength_days)) != len(strength_days):
+        raise ValueError("Strength days must not repeat.")
+    if payload["goal"] == "hyrox" and payload["sport"] != "running":
+        raise ValueError("HYROX preparation uses running as the primary activity.")
+    if strength_days and payload["goal"] != "hyrox":
+        raise ValueError("Separate strength days are available for the HYROX plan.")
+    if set(strength_days) & set(weekdays):
+        raise ValueError("Choose separate running and strength days. This planner does not prescribe double sessions.")
+    race_date = payload["race_date"]
+    if race_date is not None:
+        try:
+            if not isinstance(race_date, str) or date.fromisoformat(race_date).isoformat() != race_date:
+                raise ValueError
+        except ValueError:
+            raise ValueError("Use a valid YYYY-MM-DD race date, or leave it blank.") from None
     minutes = bounded(payload["minutes"], 10, 120, "Available minutes", True)
     if (payload["goal"] == "strength") != (payload["sport"] == "strength"):
         raise ValueError("Choose strength as both the goal and activity, or choose a cardio activity for a fitness/endurance goal.")
@@ -88,7 +114,7 @@ def save_profile(conn, payload):
             "sets": bounded(move["sets"], 1, 5, "Sets", True),
             "reps": bounded(move["reps"], 1, 30, "Repetitions", True), "load_kg": load,
         })
-    save_document(conn, "profile", dict(payload, weekdays=sorted(weekdays), minutes=minutes, routine=cleaned))
+    save_document(conn, "profile", dict(payload, weekdays=sorted(weekdays), strength_days=sorted(strength_days), minutes=minutes, routine=cleaned))
 
 
 def save_feedback(conn, payload):
@@ -148,9 +174,136 @@ def aggregate(activities):
     }
 
 
+def run_records(activities, today):
+    start = (today - timedelta(days=28)).isoformat()
+    return [a for a in activities if a.get("type") in RUN_TYPES and activity_day(a)
+            and start <= activity_day(a) < today.isoformat()
+            and finite(a.get("duration_s")) and a["duration_s"] > 0]
+
+
+def established_running(recent):
+    dates = sorted({activity_day(a) for a in recent if a["duration_s"] >= 20 * 60})
+    return len(dates) >= 6 and (date.fromisoformat(dates[-1]) - date.fromisoformat(dates[0])).days >= 14
+
+
+def quality_weekday(profile):
+    if not profile or profile["goal"] not in ("hyrox", "endurance") or profile["sport"] != "running":
+        return None
+    busy = set(profile["weekdays"]) | set(profile.get("strength_days", []))
+    return next((day for day in sorted(profile["weekdays"]) if (day - 1) % 7 not in busy and (day + 1) % 7 not in busy), None)
+
+
+def running_context(profile, activities, today):
+    recent = [a for a in activities if a.get("type") in RUN_TYPES and activity_day(a)
+              and (today - timedelta(days=27)).isoformat() <= activity_day(a) <= today.isoformat()]
+    distances = [a["distance_m"] for a in recent if finite(a.get("distance_m")) and a["distance_m"] >= 0]
+    last = next((a for a in activities if a.get("type") in RUN_TYPES and activity_day(a)
+                 and activity_day(a) <= today.isoformat() and finite(a.get("distance_m")) and a["distance_m"] > 0
+                 and finite(a.get("duration_s")) and a["duration_s"] > 0), None)
+    last_run = None if last is None else {
+        "activity_id": last["activity_id"], "date": activity_day(last), "name": last.get("name"),
+        "distance_m": last["distance_m"], "duration_s": last["duration_s"],
+        "pace_s_per_km": last["duration_s"] * 1000 / last["distance_m"],
+    }
+    plan = []
+    base_runs = run_records(activities, today)
+    quality = quality_weekday(profile) if profile and profile["experience"] == "regular" and profile["minutes"] >= 30 and established_running(base_runs) else None
+    for offset in range(7):
+        day = today + timedelta(days=offset)
+        kind, title, detail = "rest", "Rest day", "No structured session scheduled."
+        if not profile:
+            kind, title, detail = "unplanned", "Choose your training days", "Save your availability to build a running and strength schedule."
+        elif day.weekday() in profile.get("strength_days", []):
+            kind, title, detail = "strength", "Your gym session", "Use your established routine. Today's recovery and symptoms decide whether to maintain, reduce or defer it."
+        elif day.weekday() in profile["weekdays"]:
+            if profile["sport"] == "running":
+                kind, title, detail = "easy_run", "Easy aerobic run", "Conversational effort, RPE 3–4/10. Duration is bounded by recent recorded sessions."
+                if day.weekday() == quality:
+                    kind, title, detail = "controlled_run", "Controlled repeats / easy fallback", "A possible running-quality slot, not a cleared workout. Requires established running, fresh recovery and no adjacent demanding work."
+            else:
+                kind, title, detail = profile["sport"], "Planned " + profile["sport"], "Use today's decision and your saved constraints."
+        plan.append({"date": day.isoformat(), "kind": kind, "title": title, "detail": detail})
+    note = "A repeatable base week, not a race prediction or automatically progressive program."
+    if profile and profile.get("race_date"):
+        days_left = (date.fromisoformat(profile["race_date"]) - today).days
+        note += f" Race date: {profile['race_date']} ({days_left} days away)." if days_left >= 0 else " Your saved race date has passed; update it in your plan."
+    if len(distances) < len(recent):
+        note += f" Distance is partial: {len(distances)}/{len(recent)} recorded runs have distance."
+    return {"last_run": last_run, "runs_28d": len(recent),
+            "distance_28d_m": sum(distances) if distances or not recent else None,
+            "weekly_plan": plan, "note": note}
+
+
+def hyrox_session(profile, today, activities, modifiers, sleep, result):
+    """Bound running and lifting demand without converting load into a strain quota."""
+    if today.weekday() in profile.get("strength_days", []):
+        result["kind"] = "strength"
+        if modifiers:
+            result.update(status="caution", title="Reduce gym demand today", demand="Low · defer heavy work",
+                          target="Do not chase a strain number. Defer heavy lifting; light familiar movement is optional if comfortable.")
+            result["reasons"].append("Recovery modifiers: " + ", ".join(modifiers) + ".")
+            return result
+        result.update(status="suggestion", title="Keep your gym session controlled", demand="Moderate · no failure sets",
+                      target="Your usual routine, not extra volume. Keep about 3 repetitions in reserve; stop for pain or loss of form.")
+        warm = min(5, profile["minutes"] // 4)
+        result["steps"] = [
+            {"title": "Warm up", "minutes": warm, "detail": "Use familiar mobility and lighter warm-up sets; take longer if needed rather than rushing."},
+            {"title": "Your established strength work", "minutes": profile["minutes"] - 2 * warm, "detail": "Use your usual movements and manageable loads. Do not add sets to reach a Garmin load number. Leave roughly 3 repetitions in reserve; this is a conservative effort cue, not a measured strain threshold."},
+            {"title": "Finish easy", "minutes": warm, "detail": "Allow breathing to settle. Rate your whole-session effort after training."},
+        ]
+        result["limitations"].append("Gym movements and weights are not known for this HYROX profile; this is a demand guide, not an individualized lifting prescription.")
+        return result
+    recent = run_records(activities, today)
+    durations = [a["duration_s"] / 60 for a in recent if a["duration_s"] >= 60]
+    minutes = min(profile["minutes"], max(1, int(median(durations)))) if durations else min(profile["minutes"], 20)
+    if not durations or profile["experience"] == "beginner" or modifiers:
+        minutes = min(minutes, 20)
+    if durations:
+        result["reasons"].append(f"Time is capped at your availability and the median of {len(durations)} recorded runs in the previous 28 days; no automatic volume increase.")
+    else:
+        result["limitations"].append("No usable recent running-duration baseline. Use run/walk as needed; the introductory cap is 20 minutes, not a fitness estimate.")
+    warm = min(5, minutes // 4) if minutes >= 4 else round(minutes / 4, 1)
+    result.update(status="suggestion", title=f"{minutes} min easy run", kind="easy_run", demand="Easy · RPE 3–4/10",
+                  target="Run at a pace where you can speak in full sentences. Walk breaks count.")
+    result["steps"] = [
+        {"title": "Warm up", "minutes": warm, "detail": "Walk, then jog gently. Let effort build gradually."},
+        {"title": "Easy running", "minutes": round(minutes - 2 * warm, 1), "detail": "RPE 3–4/10; full-sentence conversation. Slow down or walk if effort climbs."},
+        {"title": "Cool down", "minutes": warm, "detail": "Easy jog or walk. Stop sooner if symptoms develop."},
+    ]
+    if modifiers:
+        result["reasons"].append("Easy-only because of " + ", ".join(modifiers) + ". Rest is also acceptable.")
+    established = established_running(recent)
+    recent_work = [a for a in activities if activity_day(a) and (today - timedelta(days=2)).isoformat() <= activity_day(a) < today.isoformat()]
+    demanding = any(a.get("type") in STRENGTH_TYPES or
+                    (finite(a.get("aerobic_effect")) and a["aerobic_effect"] >= 3.5) or
+                    (finite((a.get("feedback") or {}).get("rpe")) and a["feedback"]["rpe"] >= 7)
+                    for a in recent_work)
+    ran_yesterday = any(a.get("type") in RUN_TYPES and activity_day(a) == (today - timedelta(days=1)).isoformat() for a in recent_work)
+    race_soon = bool(profile.get("race_date") and 0 <= (date.fromisoformat(profile["race_date"]) - today).days <= 7)
+    quality_slot = today.weekday() == quality_weekday(profile)
+    eligible = quality_slot and established and profile["experience"] == "regular" and minutes >= 30 and not modifiers and finite(sleep) and sleep >= 6 * 3600 and not demanding and not ran_yesterday and not race_soon
+    if eligible:
+        result.update(title="30 min controlled run", kind="controlled_run", demand="Controlled · RPE 6/10 on repeats",
+                      target="4 × 2 minutes comfortably hard, with 2 minutes easy after each. Controlled, never a sprint.")
+        result["steps"] = [
+            {"title": "Warm up", "minutes": 8, "detail": "Easy jogging, RPE 2–3/10; build gradually."},
+            {"title": "4 × (2 min controlled + 2 min easy)", "minutes": 16, "detail": "Controlled portions at RPE 6/10: short phrases, not gasping. Recover at an easy jog or walk. If you cannot recover comfortably, finish easy instead."},
+            {"title": "Cool down", "minutes": 6, "detail": "Easy jog or walk, RPE 2–3/10."},
+        ]
+        result["reasons"].append("One separated weekly quality slot; at least six 20-minute runs across 14 days, a 30-minute duration baseline, no adjacent planned run/gym work and no recent recorded demanding session under this policy.")
+    elif quality_slot:
+        result["reasons"].append("Using the easy fallback: controlled repeats require an established running baseline, a 30-minute budget, adequate recorded sleep, fresh recovery and separation from demanding work. Race week also stays easy.")
+    result["limitations"].extend([
+        "No threshold or HYROX race pace is inferred from ordinary activity averages. Effort cues are used until a defensible pace prescription is available.",
+        "Six runs/14 days, 20-minute baseline sessions and the two-calendar-day demanding-work window are conservative product rules, not validated personal recovery limits. Unrecorded lifting is unknown.",
+        "This supports HYROX running preparation; station technique, sled loads and an individual race taper are not prescribed. Coordinate an established race plan with a coach.",
+    ])
+    return result
+
+
 def recommendation(profile, checkin, today, days, activities, native, now_local):
     result = {
-        "status": "setup", "title": "Set your goal and available training days",
+        "status": "setup", "title": "Build your training week",
         "source": "CIRQA rules", "policy_version": POLICY, "reasons": [], "steps": [],
         "limitations": [
             "Conservative planning aid, not Garmin Daily Suggested Workouts or medical clearance.",
@@ -172,7 +325,7 @@ def recommendation(profile, checkin, today, days, activities, native, now_local)
         return decision("checkin", "Complete today's check-in", "Yesterday's fatigue or soreness is not assumed to describe today.")
     if max(checkin["fatigue"], checkin["soreness"]) >= 7:
         return decision("rest", "Defer demanding exercise today", "You reported fatigue or soreness of 7/10 or higher. This is a conservative product threshold, not a validated physiological cut-off.")
-    if today.weekday() not in profile["weekdays"]:
+    if today.weekday() not in set(profile["weekdays"]) | set(profile.get("strength_days", [])):
         return decision("rest", "Keep your planned rest day", "Today is outside your chosen training days. Good readiness does not override your plan.")
     if any(activity_day(a) == today.isoformat() for a in activities):
         return decision("rest", "Your recorded activity counts today", "An activity is already recorded today. CIRQA does not automatically add a second session; review the recorded load and your existing plan.")
@@ -211,6 +364,8 @@ def recommendation(profile, checkin, today, days, activities, native, now_local)
     result["limitations"].append("Readiness 25/50, sleep six hours and check-in 4/7 cut-offs are disclosed conservative rules, not validated personal thresholds.")
     sport = profile["sport"]
     result["reasons"].append(f"Goal: {profile['goal'].replace('_', ' ')}. Today is a chosen training day; available time is {profile['minutes']} minutes.")
+    if profile["goal"] == "hyrox" or (profile["goal"] == "endurance" and sport == "running"):
+        return hyrox_session(profile, today, activities, modifiers, sleep, result)
     if sport == "strength":
         if modifiers:
             return decision("caution", "Defer the saved strength routine", "Recovery modifiers: " + ", ".join(modifiers) + ". No substitute weights or muscle-strain estimates are invented.")
@@ -269,7 +424,7 @@ def dashboard(conn, today_iso, period=7, now_local=None):
         checkin = None
     feedback = {r["activity_id"]: dict(r) for r in conn.execute("SELECT * FROM session_feedback")}
     activities = [dict(r) for r in conn.execute(
-        "SELECT activity_id,name,type,start_local,duration_s,training_load,aerobic_effect,anaerobic_effect,effect_label "
+        "SELECT activity_id,name,type,start_local,duration_s,distance_m,training_load,aerobic_effect,anaerobic_effect,effect_label "
         "FROM activities ORDER BY start_local DESC"
     )]
     for activity in activities:
@@ -316,5 +471,6 @@ def dashboard(conn, today_iso, period=7, now_local=None):
         "ok": True, "today": today_iso, "period": period, "profile": profile, "checkin": checkin,
         "load": {"today": aggregate(grouped.get(today_iso, [])), "acute": {"value": acute["acute_load"] if acute else None, "date": acute["date"] if acute else None}, "daily": daily},
         "comparisons": comparisons, "insights": insights, "activities": activities[:100], "native": native,
+        "running": running_context(profile, activities, today),
         "recommendation": recommendation(profile, checkin, today, days, activities, native, now_local),
     }
