@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#204e40">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="CIRQA">
+  <title>Training · CIRQA</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/training.css">
+  <script src="/pwa.js" defer></script>
+  <script src="/training.js" defer></script>
+</head>
+<body>
+<main>
+  <header><a class="brand" href="/">CIRQA<span>Training &amp; context</span></a><a href="/">Back to overview</a></header>
+  <section class="heading"><div><p class="eyebrow">Measurements first. Reasons always.</p><h1>Train with context</h1><p class="muted">Native Garmin load, your reported effort, and a plan that respects your constraints. No invented strain or recovery score.</p></div><button id="reload" type="button">Refresh saved data</button></section>
+  <p id="message" role="status" aria-live="polite">Loading your saved training data…</p>
+  <div id="error" class="error" role="alert" hidden></div>
+  <div id="training-content" hidden>
+    <section class="load-grid" aria-label="Training load">
+      <article class="hero"><p class="eyebrow">Today's recorded exercise load</p><div id="today-load" class="big">—</div><p>Garmin load units · not WHOOP Strain</p><p id="load-coverage"></p><p class="small">A partial-day total from recorded activities. Missing load is not zero; unrecorded activity is not counted.</p></article>
+      <article class="card"><p class="eyebrow">Native acute load</p><div id="acute-load" class="number">—</div><p id="acute-date" class="muted"></p><p class="small muted">Garmin's rolling load estimate. Not today's total, and not an injury-risk prediction.</p></article>
+      <article class="card"><p class="eyebrow">Your session effort</p><div id="rpe-load" class="number">—</div><p id="rpe-coverage" class="muted"></p><p class="small muted">Recorded session minutes × your whole-session RPE. Separate arbitrary units; never added to Garmin load.</p><a href="#feedback-section">Rate a session</a></article>
+    </section>
+    <section class="section card"><div class="sectionhead"><div><h2>Recorded load over time</h2><p class="muted">Calendar-spaced days, including today. Gaps are unknown, not rest.</p></div><div class="segments" aria-label="Comparison period"><button data-period="7" aria-pressed="true">7 days</button><button data-period="28" aria-pressed="false">28 days</button></div></div><div id="load-chart" class="chart" aria-label="Daily recorded exercise load"></div><details><summary>View load values and coverage</summary><div class="table-wrap"><table><thead><tr><th>Date</th><th>Garmin load</th><th>Activities with load</th><th>Session-RPE load</th></tr></thead><tbody id="load-table"></tbody></table></div></details></section>
+    <section class="section"><div class="sectionhead"><div><h2>Compare completed periods</h2><p id="comparison-dates" class="muted"></p></div></div><div id="comparisons" class="comparison-grid"></div><ul id="insights" class="insights"></ul><p class="small muted">These comparisons describe recorded data, not causes. The 75% coverage rule is a display policy, not statistical validation. Different sports and different amounts of missing data are not equivalent exposures.</p></section>
+    <section class="section card" id="recommendation" aria-labelledby="recommendation-title"><div class="sectionhead"><p class="eyebrow">Today's planning decision</p><span id="decision-state" class="badge"></span></div><h2 id="recommendation-title"></h2><p id="decision-source" class="muted"></p><h3>Why this decision?</h3><ul id="decision-reasons"></ul><ol id="decision-steps" class="steps"></ol><details open><summary>Limits &amp; missing information</summary><ul id="decision-limits" class="small muted"></ul></details><p class="small muted">Feeling unwell, pain, or new symptoms takes precedence over a wearable measurement. A suggestion is not medical clearance.</p></section>
+    <section class="section form-grid">
+      <article class="card"><p class="eyebrow">Your constraints, not guessed defaults</p><h2>Training preferences</h2><p class="muted">Save a recurring easy-training schedule. For strength, supply a routine you already use. This is not a race plan or an automatically progressive program.</p>
+        <form id="profile-form"><fieldset><legend class="sr-only">Training preferences</legend>
+          <div class="two"><label>Goal<select name="goal" required><option value="">Choose a goal</option><option value="general_fitness">General fitness</option><option value="endurance">Endurance base</option><option value="strength">Maintain established strength routine</option></select></label><label>Activity<select name="sport" required><option value="">Choose an activity</option><option value="walking">Walking</option><option value="running">Running / run-walk</option><option value="cycling">Cycling</option><option value="strength">Strength</option></select></label></div>
+          <div class="two"><label>Available minutes<input name="minutes" type="number" min="10" max="120" step="1" required></label><label>Experience<select name="experience" required><option value="">Choose experience</option><option value="beginner">Beginner / returning</option><option value="regular">Regular in this activity</option></select></label></div>
+          <label>Available equipment<select name="equipment" required><option value="">Choose equipment</option><option value="none">None / bodyweight</option><option value="bike">Bike</option><option value="gym">Gym / weights</option></select></label>
+          <fieldset class="weekdays"><legend>Training days — unchecked days remain rest days</legend><label><input type="checkbox" name="weekday" value="0">Mon</label><label><input type="checkbox" name="weekday" value="1">Tue</label><label><input type="checkbox" name="weekday" value="2">Wed</label><label><input type="checkbox" name="weekday" value="3">Thu</label><label><input type="checkbox" name="weekday" value="4">Fri</label><label><input type="checkbox" name="weekday" value="5">Sat</label><label><input type="checkbox" name="weekday" value="6">Sun</label></fieldset>
+          <div id="routine-section" hidden><h3>Your established strength routine</h3><p class="small muted">Enter your usual exercise order, sets, reps and resistance. Use 0 kg for bodyweight/no added resistance. CIRQA will not invent or increase these values. Avoid scheduling this same routine on consecutive days.</p><div id="routine-rows"></div><button id="add-movement" type="button">Add movement</button></div>
+          <button type="submit" class="primary">Save preferences</button>
+        </fieldset></form>
+      </article>
+      <article class="card"><p class="eyebrow">Required before a suggestion</p><h2>Today's check-in</h2><p id="checkin-date" class="muted"></p><p class="small muted">Rate fatigue and current soreness from 0 (none) to 10 (extreme). These answers are not carried forward to tomorrow.</p>
+        <form id="checkin-form"><fieldset><legend class="sr-only">Today's condition</legend><div class="two"><label>Fatigue (0–10)<input name="fatigue" type="number" min="0" max="10" step="1" required></label><label>Current soreness (0–10)<input name="soreness" type="number" min="0" max="10" step="1" required></label></div><label>Pain or injury symptoms today?<select name="pain" required><option value="">Choose an answer</option><option value="false">No</option><option value="true">Yes</option></select></label><label>Feeling ill today?<select name="illness" required><option value="">Choose an answer</option><option value="false">No</option><option value="true">Yes</option></select></label><button type="submit" class="primary">Save today's check-in</button></fieldset></form>
+        <details class="method"><summary>How the planner decides</summary><p class="small muted">Pain or illness vetoes exercise prescription. Fatigue/soreness at least 7 defers training. Rest days stay rest days; recorded activity prevents adding a second session. Missing today's dated readiness prevents a structured suggestion. Readiness below 25 defers training; below 50, sleep below six hours, or fatigue/soreness at least 4 moderates it. These are conservative product rules—not validated personal thresholds. Cardio duration is capped to your available time and recent same-sport median; no baseline or beginner experience caps it at 20 minutes. No hard intervals, guessed heart-rate targets, or automatic progression.</p></details>
+        <p class="small muted">Readiness must be dated today and no more than 12 hours old; future timestamps are rejected. This freshness limit is also a product rule, not a physiological threshold.</p>
+      </article>
+    </section>
+    <section class="section card"><p class="eyebrow">Separate from CIRQA's planner</p><h2>Garmin calendar &amp; plans</h2><p id="native-status" class="muted"></p><div id="native-workouts"></div><p class="small muted">These are accessible scheduled calendar workouts, not a promise to mirror the watch's Daily Suggested Workouts. A blank calendar does not prove the watch has no suggestion. Confirm current instructions in Garmin Connect; CIRQA does not invent missing workout steps.</p><a href="https://connect.garmin.com/modern/calendar" target="_blank" rel="noopener noreferrer">Open Garmin calendar</a></section>
+    <section class="section card" id="feedback-section"><p class="eyebrow">Your report — never inferred</p><h2>Session effort &amp; soreness</h2><p class="muted">Rate the whole session, not its hardest moment: 0 rest, 2 easy, 3 moderate, 5 hard, 7 very hard, 10 maximal. Be consistent about when you report it. Leave a rating blank to remove it.</p>
+      <form id="feedback-form"><fieldset><legend class="sr-only">Session feedback</legend><label>Recorded activity<select name="activity_id" id="feedback-activity" required></select></label><div class="two"><label>Whole-session RPE (0–10)<input name="rpe" type="number" min="0" max="10" step="0.5"></label><label>Post-session soreness (0–10)<input name="soreness" type="number" min="0" max="10" step="1"></label></div><label>Optional notes<textarea name="notes" maxlength="500" rows="3"></textarea></label><p id="effort-preview" class="small muted"></p><button type="submit" class="primary">Save session feedback</button></fieldset></form>
+    </section>
+    <section class="section"><h2>Recent session measurements</h2><p class="muted">Native Training Effect is shown on its own 0–5 scale, never summed. Feedback remains separate from Garmin measurements.</p><div id="activity-list" class="activity-grid"></div></section>
+    <section class="section card method"><h2>What these numbers mean</h2><p>Recorded exercise load is not all-day strain, muscle damage, or a target to chase. Session-RPE is subjective training load in separate arbitrary units. Missing data stays missing.</p><p class="small"><a href="https://www.garmin.com/en-US/garmin-technology/running-science/physiological-measurements/training-load/" target="_blank" rel="noopener noreferrer">Garmin load methodology</a> · <a href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2017.00612/full" target="_blank" rel="noopener noreferrer">Session-RPE evidence and limitations</a></p></section>
+  </div>
+  <footer>Private history · Local and cloud copies are independent · No offline health-data cache</footer>
+</main>
+</body>
+</html>

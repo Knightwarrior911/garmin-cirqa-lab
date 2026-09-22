@@ -36,11 +36,14 @@ class CloudAccessTests(unittest.TestCase):
 
     def test_health_routes_require_owner_before_reading_storage(self):
         with patch.object(cloud_state, "load_state", side_effect=AssertionError("Must not access storage")):
-            for path in ("/api/dashboard", "/api/days", "/api/activities", "/api/activity/123"):
+            for path in ("/api/dashboard", "/api/days", "/api/activities", "/api/activity/123", "/api/training"):
                 response = self.client.get(path, base_url=self.root)
                 self.assertEqual(response.status_code, 401)
                 self.assertEqual(response.headers["Cache-Control"], "private, no-store")
             self.assertEqual(self.client.get("/", base_url=self.root).location, "/login")
+            for kind in ("profile", "feedback", "checkin"):
+                response = self.client.post("/api/training/" + kind, base_url=self.root, json={}, headers={"Origin": self.root, "X-CIRQA-Request": "1"})
+                self.assertEqual(response.status_code, 401)
 
     def test_owner_session_cookie_and_logout(self):
         response = self.sign_in()
@@ -61,6 +64,10 @@ class CloudAccessTests(unittest.TestCase):
             for headers in ({}, {"Origin": "https://other.example", "X-CIRQA-Request": "1"}, {"Origin": self.root}):
                 self.assertEqual(self.client.post("/api/sync", base_url=self.root, headers=headers).status_code, 403)
             self.assertEqual(self.client.get("/api/cron", base_url=self.root).status_code, 401)
+        with patch.object(cloud_state, "load_state", side_effect=AssertionError("Must not access storage")):
+            for kind in ("profile", "feedback", "checkin"):
+                response = self.client.post("/api/training/" + kind, base_url=self.root, json={}, headers={"Origin": "https://other.example", "X-CIRQA-Request": "1"})
+                self.assertEqual(response.status_code, 403)
 
     def test_snapshot_response_contains_readings_not_private_tokens(self):
         with tempfile.TemporaryDirectory() as folder:

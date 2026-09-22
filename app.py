@@ -13,6 +13,7 @@ from werkzeug.exceptions import HTTPException
 
 import cloud_state
 import store
+import training
 
 ROOT = Path(__file__).resolve().parent
 DASHBOARD = ROOT / "dashboard"
@@ -37,6 +38,8 @@ PUBLIC_FILES = {
     "pwa.js": "text/javascript",
     "activity.js": "text/javascript",
     "activity.css": "text/css",
+    "training.js": "text/javascript",
+    "training.css": "text/css",
 }
 LOGIN = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -151,6 +154,11 @@ def homepage():
     return send_from_directory(DASHBOARD, "index.html")
 
 
+@app.get("/training")
+def training_page():
+    return send_from_directory(DASHBOARD, "training.html")
+
+
 @app.get("/activity")
 @app.get("/activities")
 def activity_page():
@@ -239,3 +247,36 @@ def activity_fetch(aid):
 @app.get("/api/cron")
 def scheduled_sync():
     return jsonify(cloud_state.sync_status(cloud_state.run_job("sync")))
+
+
+def training_today():
+    return datetime.now(ZoneInfo(os.environ.get("CIRQA_TIMEZONE", "Asia/Kolkata"))).date().isoformat()
+
+
+@app.get("/api/training")
+def training_data():
+    try:
+        period = int(request.args.get("period", "7"))
+        if period not in (7, 28):
+            raise ValueError()
+    except ValueError:
+        return jsonify(ok=False, error="Choose a 7 or 28 day comparison."), 400
+    state, _ = cloud_state.load_state()
+    with cloud_state.open_snapshot(state) as (conn, _):
+        return jsonify(training.dashboard(conn, training_today(), period))
+
+
+@app.post("/api/training/<kind>")
+def training_update(kind):
+    if kind not in ("profile", "feedback", "checkin"):
+        return jsonify(ok=False, error="Not found."), 404
+    if not request.is_json:
+        return jsonify(ok=False, error="Send a JSON object."), 400
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(ok=False, error="Send a JSON object."), 400
+    try:
+        cloud_state.update_training(kind, payload, training_today())
+    except ValueError as error:
+        return jsonify(ok=False, error=str(error)), 400
+    return jsonify(ok=True)

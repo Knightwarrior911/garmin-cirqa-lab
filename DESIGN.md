@@ -34,3 +34,9 @@ Four primary native statistics, expandable additional values, then aligned recor
 Pace is positioned on an equal-speed scale to preserve near-stationary samples without flattening the moving portions; exact pace values remain available on hover. Nonnegative metrics never have negative axis labels. Do not connect missing readings or gaps longer than 30 seconds.
 
 Native zones, laps, typed intervals, strength sets and an optional local GPS trace follow the charts. Comparison uses explicit units; pace and speed are separate rows across different sports. Missing streams and partial download failures remain visible. No inferred interval classification, performance ranking or coaching.
+
+## Training workspace
+
+Keep load, comparisons and the planner on `/training`, linked from overview and activity detail. Native Garmin load, native acute load and optional session-RPE occupy separate cards with independent units. Unknown values use an em dash with accessible “Unavailable” text; valid zero remains numeric. Calendar load bars retain unknown gaps, mark partial totals, and provide a recorded-value table.
+
+Display a decision's source, policy version, reasons, steps and limitations together. Forms must not assume a goal, equipment, daily symptoms or exercise loads. Preserve unsaved entries across period changes and reads; confirm before discarding session feedback. Save errors remain actionable without clearing inputs. Show 12 recent session cards initially, with an explicit expansion control. Native calendar status remains separate from CIRQA decisions and labels the distinction from watch suggestions.

@@ -190,7 +190,70 @@ def extract_activity(a):
         "avg_hr": number(a.get("averageHR")),
         "max_hr": number(a.get("maxHR")),
         "elevation_m": number(a.get("elevationGain")),
+        "training_load": number(a.get("activityTrainingLoad")),
+        "aerobic_effect": number(a.get("aerobicTrainingEffect"), 5),
+        "anaerobic_effect": number(a.get("anaerobicTrainingEffect"), 5),
+        "effect_label": a.get("trainingEffectLabel") if isinstance(a.get("trainingEffectLabel"), str) else None,
     }
+
+
+def sync_native_workouts(garmin, conn):
+    """Cache accessible calendar workouts, not unverified watch-generated suggestions."""
+    today = date.today()
+    checked_at = store.now_iso()
+    row = conn.execute(
+        "SELECT value_json FROM training_documents WHERE kind='native_workouts'"
+    ).fetchone()
+    previous = json.loads(row["value_json"]) if row else {}
+    if str(previous.get("checked_at", ""))[:10] == today.isoformat():
+        return
+    next_month = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+    final_month_day = (next_month.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    result = dict(previous, checked_at=checked_at, error=None)
+    try:
+        items = []
+        for month in (today.replace(day=1), next_month):
+            payload = garmin.get_scheduled_workouts(month.year, month.month)
+            if not isinstance(payload, dict) or not isinstance(payload.get("calendarItems"), list):
+                raise ValueError("Unsupported calendar response")
+            items.extend(payload["calendarItems"])
+        workouts = {}
+        for item in items:
+            if not isinstance(item, dict) or item.get("itemType") != "workout":
+                continue
+            day = item.get("date")
+            if not isinstance(day, str):
+                continue
+            try:
+                scheduled_date = date.fromisoformat(day[:10])
+            except ValueError:
+                continue
+            identifier = item.get("workoutId") or item.get("itemId") or item.get("id")
+            if identifier is None:
+                continue
+            name = item.get("title") or item.get("workoutName") or "Scheduled Garmin workout"
+            description = item.get("description")
+            workouts[(scheduled_date.isoformat(), str(identifier))] = {
+                "id": str(identifier), "date": scheduled_date.isoformat(),
+                "name": str(name)[:200],
+                "description": description[:1000] if isinstance(description, str) else "",
+            }
+        plans = garmin.get_training_plans()
+        if not isinstance(plans, dict) or not isinstance(plans.get("trainingPlanList"), list):
+            raise ValueError("Unsupported training plan response")
+        result.update(
+            workouts=sorted(workouts.values(), key=lambda item: (item["date"], item["id"])),
+            plans_count=len(plans["trainingPlanList"]), last_success_at=checked_at,
+            range_start=today.replace(day=1).isoformat(), range_end=final_month_day.isoformat(),
+        )
+    except Exception:
+        result["error"] = "Garmin calendar or plan retrieval was unavailable. Any previous schedule is retained, not confirmed current."
+    conn.execute(
+        "INSERT INTO training_documents(kind,value_json,updated_at) VALUES('native_workouts',?,?) "
+        "ON CONFLICT(kind) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at",
+        (json.dumps(result, allow_nan=False), checked_at),
+    )
+    conn.commit()
 
 
 def sync_real(garmin, conn, days, force=False, quiet=False):
@@ -215,6 +278,7 @@ def sync_real(garmin, conn, days, force=False, quiet=False):
                 acts_written += 1
     except Exception as exc:
         errors.append(f"get_activities: {type(exc).__name__}")
+    sync_native_workouts(garmin, conn)
     store.log_sync(
         conn,
         "garmin",

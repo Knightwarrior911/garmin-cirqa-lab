@@ -90,6 +90,18 @@ CREATE TABLE IF NOT EXISTS activity_details (
   attempted_at REAL,
   error TEXT
 );
+CREATE TABLE IF NOT EXISTS training_documents (
+  kind TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS session_feedback (
+  activity_id TEXT PRIMARY KEY,
+  rpe REAL,
+  soreness INTEGER,
+  notes TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
 """
 
 DAY_COLUMNS = [
@@ -134,6 +146,13 @@ EXTRA_DAY_COLUMNS = {
 }
 DAY_COLUMNS.extend(EXTRA_DAY_COLUMNS)
 
+EXTRA_ACTIVITY_COLUMNS = {
+    "training_load": "REAL",
+    "aerobic_effect": "REAL",
+    "anaerobic_effect": "REAL",
+    "effect_label": "TEXT",
+}
+
 
 def connect_db(db_path=None):
     path = Path(db_path) if db_path is not None else DB_PATH
@@ -146,6 +165,10 @@ def connect_db(db_path=None):
     for column, kind in EXTRA_DAY_COLUMNS.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE days ADD COLUMN {column} {kind}")
+    activity_columns = {r["name"] for r in conn.execute("PRAGMA table_info(activities)")}
+    for column, kind in EXTRA_ACTIVITY_COLUMNS.items():
+        if column not in activity_columns:
+            conn.execute(f"ALTER TABLE activities ADD COLUMN {column} {kind}")
     conn.commit()
     return conn
 
@@ -203,25 +226,18 @@ def activity_count(conn):
 
 
 def upsert_activity(conn, a, source="garmin"):
+    # Omitted fields preserve prior readings; explicit null clears an unavailable value.
+    allowed = [
+        "name", "type", "start_local", "start_iso", "duration_s", "distance_m",
+        "calories", "avg_hr", "max_hr", "elevation_m", "raw_json",
+        *EXTRA_ACTIVITY_COLUMNS,
+    ]
+    columns = ["activity_id", "source"] + [key for key in allowed if key in a]
+    updates = ", ".join(f"{key}=excluded.{key}" for key in columns if key != "activity_id")
     conn.execute(
-        "INSERT OR REPLACE INTO activities (activity_id, name, type, start_local, start_iso, "
-        "duration_s, distance_m, calories, avg_hr, max_hr, elevation_m, source, raw_json) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (
-            str(a.get("activity_id")),
-            a.get("name"),
-            a.get("type"),
-            a.get("start_local"),
-            a.get("start_iso"),
-            a.get("duration_s"),
-            a.get("distance_m"),
-            a.get("calories"),
-            a.get("avg_hr"),
-            a.get("max_hr"),
-            a.get("elevation_m"),
-            source,
-            a.get("raw_json"),
-        ),
+        f"INSERT INTO activities ({', '.join(columns)}) VALUES ({','.join('?' for _ in columns)}) "
+        f"ON CONFLICT(activity_id) DO UPDATE SET {updates}",
+        [str(a["activity_id"]), source] + [a[key] for key in columns[2:]],
     )
     conn.commit()
 

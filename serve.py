@@ -14,6 +14,7 @@ from urllib.parse import urlparse, parse_qs
 
 import store
 import activity_detail
+import training
 
 ROOT = Path(__file__).parent
 COOLDOWN = 30 * 60
@@ -26,6 +27,9 @@ STATIC_FILES = {
     "/activities": ("activity.html", "text/html"),
     "/activity.js": ("activity.js", "text/javascript"),
     "/activity.css": ("activity.css", "text/css"),
+    "/training": ("training.html", "text/html"),
+    "/training.js": ("training.js", "text/javascript"),
+    "/training.css": ("training.css", "text/css"),
     "/pwa.js": ("pwa.js", "text/javascript"),
     "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
     "/icon-192.png": ("icon-192.png", "image/png"),
@@ -134,6 +138,15 @@ class Handler(BaseHTTPRequestHandler):
                     "activities": store.get_activities(conn, 100),
                     "sync": sync_status(), "hosting": "local",
                 })
+            elif parsed.path == "/api/training":
+                try:
+                    period = int(qs.get("period", ["7"])[0])
+                    if period not in (7, 28):
+                        raise ValueError()
+                except ValueError:
+                    self.send_json({"ok": False, "error": "Choose a 7 or 28 day comparison."}, 400)
+                    return
+                self.send_json(training.dashboard(conn, date.today().isoformat(), period))
             elif parsed.path == "/api/overview":
                 ov = store.overview(conn)
                 ov["today"] = date.today().isoformat()
@@ -175,6 +188,34 @@ class Handler(BaseHTTPRequestHandler):
                 {"ok": False, "error": "Request must come from the local dashboard"},
                 403,
             )
+            return
+        if self.path.startswith("/api/training/"):
+            actions = {
+                "/api/training/profile": training.save_profile,
+                "/api/training/feedback": training.save_feedback,
+                "/api/training/checkin": lambda conn, data: training.save_checkin(conn, data, date.today().isoformat()),
+            }
+            if self.path not in actions:
+                self.send_json({"ok": False, "error": "Not found"}, 404)
+                return
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if not 0 < size <= 4096:
+                    raise ValueError("Send a JSON object no larger than 4096 bytes.")
+                if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
+                    raise ValueError("Send a JSON object.")
+                payload = json.loads(self.rfile.read(size))
+                if not isinstance(payload, dict):
+                    raise ValueError("Send a JSON object.")
+                conn = store.connect_db()
+                try:
+                    actions[self.path](conn, payload)
+                finally:
+                    conn.close()
+            except (ValueError, UnicodeError) as error:
+                self.send_json({"ok": False, "error": str(error)}, 400)
+                return
+            self.send_json({"ok": True})
             return
         if self.path.startswith("/api/activity/") and self.path.endswith("/fetch"):
             aid = self.path[len("/api/activity/") : -len("/fetch")]

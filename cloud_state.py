@@ -23,6 +23,7 @@ from urllib.request import Request, urlopen
 
 import activity_detail
 import store
+import training
 
 ROOT = Path(__file__).resolve().parent
 STATE_PATH = "cirqa/state-v1.json.gz"
@@ -230,3 +231,21 @@ def run_job(kind, aid=None):
         # A stale worker can never overwrite a successor's snapshot.
         save_state(state, etag)
         return state
+
+
+def update_training(kind, payload, today):
+    """Persist owner input atomically without overwriting a running Garmin job."""
+    actions = {
+        "profile": training.save_profile,
+        "feedback": training.save_feedback,
+        "checkin": lambda conn, data: training.save_checkin(conn, data, today),
+    }
+    if kind not in actions:
+        raise ValueError("Unsupported training update.")
+    state, etag = load_state()
+    if active_lease(state):
+        raise StateConflict("Garmin is refreshing. Wait for it to finish, then save again; your form has not been saved.")
+    with open_snapshot(state) as (conn, _):
+        actions[kind](conn, payload)
+        state["database"] = database_backup(conn)
+    save_state(state, etag)
