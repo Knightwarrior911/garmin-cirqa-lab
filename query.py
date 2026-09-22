@@ -1,16 +1,15 @@
 """Agent-friendly CLI over the local store. Prints JSON.
 
-    .venv\\Scripts\\python query.py overview
-    .venv\\Scripts\\python query.py days 14
-    .venv\\Scripts\\python query.py activities 10
-    .venv\\Scripts\\python query.py log 10
-    .venv\\Scripts\\python query.py insights
-    .venv\\Scripts\\python query.py coverage
+.venv\\Scripts\\python query.py overview
+.venv\\Scripts\\python query.py days 14
+.venv\\Scripts\\python query.py activities 10
+.venv\\Scripts\\python query.py log 10
+.venv\\Scripts\\python query.py coverage
 """
+
 import json
 import sys
 
-import insights
 import store
 
 
@@ -26,12 +25,10 @@ def main():
         out = store.get_activities(conn, arg or 10)
     elif cmd == "log":
         out = store.get_log(conn, arg or 20)
-    elif cmd == "insights":
-        out = insights.generate(conn)
     elif cmd == "coverage":
         out = store.coverage(conn)
     else:
-        sys.exit(f"Unknown command: {cmd}. Use overview|days|activities|log|insights|coverage")
+        sys.exit(f"Unknown command: {cmd}. Use overview|days|activities|log|coverage")
     print(json.dumps(out, indent=2, default=str))
 
 

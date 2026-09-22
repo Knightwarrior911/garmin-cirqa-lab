@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "flask",
+  "functions": {
+    "app.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{data/**,.env*,.venv/**,.git/**,.vercel/**,__pycache__/**,test_*.py,scripts/**}"
+    }
+  },
+  "crons": [{"path": "/api/cron", "schedule": "30 2 * * *"}]
+}

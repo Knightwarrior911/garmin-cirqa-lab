@@ -1,5 +1,5 @@
 """SQLite storage for Garmin CIRQA data: daily metrics, activities, run splits, training log."""
-import json
+
 import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -83,23 +83,70 @@ CREATE TABLE IF NOT EXISTS sync_log (
   ok INTEGER,
   error TEXT
 );
+CREATE TABLE IF NOT EXISTS activity_details (
+  activity_id TEXT PRIMARY KEY,
+  payload_json TEXT,
+  fetched_at TEXT,
+  attempted_at REAL,
+  error TEXT
+);
 """
 
 DAY_COLUMNS = [
-    "date", "steps", "calories", "resting_hr", "stress_avg",
-    "body_battery_high", "body_battery_low", "spo2_avg", "respiration_avg",
-    "sleep_seconds", "sleep_score", "sleep_deep_s", "sleep_rem_s", "sleep_light_s",
-    "sleep_awake_s", "hrv_last_night", "hrv_weekly_avg",
-    "hrv_baseline_low", "hrv_baseline_high", "training_readiness",
+    "date",
+    "steps",
+    "calories",
+    "resting_hr",
+    "stress_avg",
+    "body_battery_high",
+    "body_battery_low",
+    "spo2_avg",
+    "respiration_avg",
+    "sleep_seconds",
+    "sleep_score",
+    "sleep_deep_s",
+    "sleep_rem_s",
+    "sleep_light_s",
+    "sleep_awake_s",
+    "hrv_last_night",
+    "hrv_weekly_avg",
+    "hrv_baseline_low",
+    "hrv_baseline_high",
+    "training_readiness",
 ]
 
 
-def connect_db():
-    DATA_DIR.mkdir(exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+EXTRA_DAY_COLUMNS = {
+    "body_battery_current": "INTEGER",
+    "training_readiness_level": "TEXT",
+    "recovery_time_hours": "REAL",
+    "hrv_status": "TEXT",
+    "training_status": "TEXT",
+    "acute_load": "REAL",
+    "load_ratio": "REAL",
+    "vo2_max": "REAL",
+    "steps_goal": "INTEGER",
+    "intensity_minutes": "INTEGER",
+    "active_calories": "REAL",
+    "total_calories": "REAL",
+    "readiness_updated_at": "TEXT",
+    "body_battery_updated_at": "TEXT",
+}
+DAY_COLUMNS.extend(EXTRA_DAY_COLUMNS)
+
+
+def connect_db(db_path=None):
+    path = Path(db_path) if db_path is not None else DB_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
     conn.execute("PRAGMA journal_mode=WAL")
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(days)")}
+    for column, kind in EXTRA_DAY_COLUMNS.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE days ADD COLUMN {column} {kind}")
+    conn.commit()
     return conn
 
 
@@ -108,12 +155,15 @@ def now_iso():
 
 
 def upsert_day(conn, values, source="garmin"):
-    """values: dict keyed by DAY_COLUMNS (missing keys -> NULL)."""
-    row = {k: values.get(k) for k in DAY_COLUMNS}
+    """Update returned fields; failed endpoints omit keys and preserve stored values."""
+    columns = [k for k in DAY_COLUMNS if k in values]
+    fields = columns + ["source", "extracted_json", "fetched_at"]
+    updates = ", ".join(f"{k}=excluded.{k}" for k in fields if k != "date")
     conn.execute(
-        f"INSERT OR REPLACE INTO days ({', '.join(DAY_COLUMNS)}, source, extracted_json, fetched_at) "
-        f"VALUES ({', '.join('?' * len(DAY_COLUMNS))}, ?, ?, ?)",
-        [row[k] for k in DAY_COLUMNS] + [source, values.get("extracted_json"), now_iso()],
+        f"INSERT INTO days ({', '.join(fields)}) VALUES ({','.join('?' for _ in fields)}) "
+        f"ON CONFLICT(date) DO UPDATE SET {updates}",
+        [values[k] for k in columns]
+        + [source, values.get("extracted_json"), now_iso()],
     )
     conn.commit()
 
@@ -124,7 +174,9 @@ def get_day(conn, d):
 
 def get_days(conn, n=90):
     """Most recent n days, ascending by date."""
-    rows = conn.execute("SELECT * FROM days ORDER BY date DESC LIMIT ?", (int(n),)).fetchall()
+    rows = conn.execute(
+        "SELECT * FROM days ORDER BY date DESC LIMIT ?", (int(n),)
+    ).fetchall()
     return list(reversed(rows))
 
 
@@ -132,25 +184,16 @@ def day_to_dict(row):
     if row is None:
         return None
     d = {k: row[k] for k in row.keys()}
-    d["sleep_hours"] = round(d["sleep_seconds"] / 3600.0, 2) if d.get("sleep_seconds") else None
-    return d
-
-
-def upsert_activity(conn, a, source="garmin"):
-    conn.execute(
-        "INSERT OR REPLACE INTO activities (activity_id, name, type, start_local, start_iso, "
-        "duration_s, distance_m, calories, avg_hr, max_hr, source, raw_json) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-        (str(a.get("activity_id")), a.get("name"), a.get("type"), a.get("start_local"),
-         a.get("start_iso"), a.get("duration_s"), a.get("distance_m"), a.get("calories"),
-         a.get("avg_hr"), a.get("max_hr"), source, a.get("raw_json")),
+    d["sleep_hours"] = (
+        round(d["sleep_seconds"] / 3600.0, 2) if d.get("sleep_seconds") else None
     )
-    conn.commit()
+    return d
 
 
 def get_activities(conn, limit=20):
     rows = conn.execute(
-        "SELECT * FROM activities ORDER BY COALESCE(start_iso, start_local) DESC LIMIT ?", (int(limit),)
+        "SELECT * FROM activities ORDER BY COALESCE(start_iso, start_local) DESC LIMIT ?",
+        (int(limit),),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -164,9 +207,21 @@ def upsert_activity(conn, a, source="garmin"):
         "INSERT OR REPLACE INTO activities (activity_id, name, type, start_local, start_iso, "
         "duration_s, distance_m, calories, avg_hr, max_hr, elevation_m, source, raw_json) "
         "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (str(a.get("activity_id")), a.get("name"), a.get("type"), a.get("start_local"),
-         a.get("start_iso"), a.get("duration_s"), a.get("distance_m"), a.get("calories"),
-         a.get("avg_hr"), a.get("max_hr"), a.get("elevation_m"), source, a.get("raw_json")),
+        (
+            str(a.get("activity_id")),
+            a.get("name"),
+            a.get("type"),
+            a.get("start_local"),
+            a.get("start_iso"),
+            a.get("duration_s"),
+            a.get("distance_m"),
+            a.get("calories"),
+            a.get("avg_hr"),
+            a.get("max_hr"),
+            a.get("elevation_m"),
+            source,
+            a.get("raw_json"),
+        ),
     )
     conn.commit()
 
@@ -177,14 +232,25 @@ def replace_splits(conn, activity_id, splits):
         conn.execute(
             "INSERT OR REPLACE INTO splits (activity_id, idx, distance_m, duration_s, avg_hr, pace_s_per_km) "
             "VALUES (?,?,?,?,?,?)",
-            (str(activity_id), i, s.get("distance_m"), s.get("duration_s"),
-             s.get("avg_hr"), s.get("pace_s_per_km")),
+            (
+                str(activity_id),
+                i,
+                s.get("distance_m"),
+                s.get("duration_s"),
+                s.get("avg_hr"),
+                s.get("pace_s_per_km"),
+            ),
         )
     conn.commit()
 
 
 def has_splits(conn, activity_id):
-    return conn.execute("SELECT 1 FROM splits WHERE activity_id=? LIMIT 1", (str(activity_id),)).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM splits WHERE activity_id=? LIMIT 1", (str(activity_id),)
+        ).fetchone()
+        is not None
+    )
 
 
 def get_splits(conn, activity_id):
@@ -208,15 +274,28 @@ def add_log_entry(conn, e, source="user"):
     cur = conn.execute(
         "INSERT INTO training_log (date, session, exercise, sets, reps, load_kg, rpe, soreness, notes, created_at, source) "
         "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        (e.get("date"), e.get("session"), e.get("exercise"), e.get("sets"), e.get("reps"),
-         e.get("load_kg"), e.get("rpe"), e.get("soreness"), e.get("notes"), now_iso(), source),
+        (
+            e.get("date"),
+            e.get("session"),
+            e.get("exercise"),
+            e.get("sets"),
+            e.get("reps"),
+            e.get("load_kg"),
+            e.get("rpe"),
+            e.get("soreness"),
+            e.get("notes"),
+            now_iso(),
+            source,
+        ),
     )
     conn.commit()
     return cur.lastrowid
 
 
 def get_log(conn, limit=50):
-    rows = conn.execute("SELECT * FROM training_log ORDER BY date DESC, id DESC LIMIT ?", (int(limit),)).fetchall()
+    rows = conn.execute(
+        "SELECT * FROM training_log ORDER BY date DESC, id DESC LIMIT ?", (int(limit),)
+    ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -224,18 +303,30 @@ def log_count(conn):
     return conn.execute("SELECT COUNT(*) c FROM training_log").fetchone()["c"]
 
 
-def log_sync(conn, mode, days_requested, days_written, activities_written, ok, error=None):
+def log_sync(
+    conn, mode, days_requested, days_written, activities_written, ok, error=None
+):
     conn.execute(
         "INSERT INTO sync_log (started_at, finished_at, mode, days_requested, days_written, "
         "activities_written, ok, error) VALUES (?,?,?,?,?,?,?,?)",
-        (now_iso(), now_iso(), mode, days_requested, days_written, activities_written,
-         1 if ok else 0, error),
+        (
+            now_iso(),
+            now_iso(),
+            mode,
+            days_requested,
+            days_written,
+            activities_written,
+            1 if ok else 0,
+            error,
+        ),
     )
     conn.commit()
 
 
 def last_sync(conn):
-    row = conn.execute("SELECT finished_at, mode FROM sync_log WHERE ok=1 ORDER BY id DESC LIMIT 1").fetchone()
+    row = conn.execute(
+        "SELECT finished_at, mode FROM sync_log WHERE ok=1 ORDER BY id DESC LIMIT 1"
+    ).fetchone()
     return dict(row) if row else None
 
 
@@ -243,13 +334,18 @@ def clear_demo(conn):
     cur_d = conn.execute("DELETE FROM days WHERE source='demo'")
     cur_a = conn.execute("DELETE FROM activities WHERE source='demo'")
     cur_l = conn.execute("DELETE FROM training_log WHERE source='demo'")
-    conn.execute("DELETE FROM splits WHERE activity_id NOT IN (SELECT activity_id FROM activities)")
+    conn.execute(
+        "DELETE FROM splits WHERE activity_id NOT IN (SELECT activity_id FROM activities)"
+    )
     conn.commit()
     return cur_d.rowcount + cur_a.rowcount + cur_l.rowcount
 
 
 def has_real_data(conn):
-    return conn.execute("SELECT 1 FROM days WHERE source='garmin' LIMIT 1").fetchone() is not None
+    return (
+        conn.execute("SELECT 1 FROM days WHERE source='garmin' LIMIT 1").fetchone()
+        is not None
+    )
 
 
 def coverage(conn):
@@ -265,9 +361,16 @@ def coverage(conn):
 
 
 def overview(conn):
-    rows = conn.execute("SELECT MIN(date) first_day, MAX(date) last_day, COUNT(*) n FROM days").fetchone()
-    demo = conn.execute("SELECT 1 FROM days WHERE source='demo' LIMIT 1").fetchone() is not None
-    latest = day_to_dict(conn.execute("SELECT * FROM days ORDER BY date DESC LIMIT 1").fetchone())
+    rows = conn.execute(
+        "SELECT MIN(date) first_day, MAX(date) last_day, COUNT(*) n FROM days"
+    ).fetchone()
+    demo = (
+        conn.execute("SELECT 1 FROM days WHERE source='demo' LIMIT 1").fetchone()
+        is not None
+    )
+    latest = day_to_dict(
+        conn.execute("SELECT * FROM days ORDER BY date DESC LIMIT 1").fetchone()
+    )
     return {
         "first_day": rows["first_day"],
         "last_day": rows["last_day"],
@@ -282,4 +385,7 @@ def overview(conn):
 
 
 def iso_days_back(n):
-    return [(date.today() - timedelta(days=i)).isoformat() for i in range(int(n) - 1, -1, -1)]
+    return [
+        (date.today() - timedelta(days=i)).isoformat()
+        for i in range(int(n) - 1, -1, -1)
+    ]

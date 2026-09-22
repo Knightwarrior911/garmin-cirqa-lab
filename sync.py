@@ -1,395 +1,270 @@
-"""Sync Garmin Connect data into the local SQLite database.
+"""Collect Garmin Connect measurements. No locally invented recovery scores.
 
-Real sync (requires login first):
-    .venv\\Scripts\\python sync.py            # backfill last 30 days + activities + run splits
-    .venv\\Scripts\\python sync.py --days 90   # deeper backfill
-    .venv\\Scripts\\python sync.py --force     # refetch every day, ignore cache
-
-Pipeline smoke test without a Garmin account:
-    .venv\\Scripts\\python sync.py --demo      # seed ~30 days of clearly-marked demo data
-    .venv\\Scripts\\python sync.py --clear-demo
-
-Notes
-- Today and yesterday are always refreshed (partial-day data).
-- Demo rows are automatically removed the first time a real sync runs.
-- Run splits (per-km pace/HR) are fetched for the 15 most recent run activities
-  and power the run-analysis insights.
+sync.py --days 30 --force backfills updated mappings. Normal sync refreshes two days.
 """
+
 import argparse
 import json
-import random
+import math
 import sys
 from datetime import date, timedelta
 
 import store
-from store import iso_days_back, now_iso
-
-RUN_TYPES = {"running", "trail_running", "treadmill_running", "virtual_run", "track_running"}
-SPLIT_FETCH_CAP = 15
 
 
-def safe(garmin, name, *args):
-    """Call a Garmin client method by name; missing methods or failures -> None.
-
-    Resolving the attribute here (not at the call site) means an endpoint that
-    does not exist in the installed garminconnect version can never abort a sync.
-    """
-    fn = getattr(garmin, name, None)
-    if not callable(fn):
+def number(value, maximum=None):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    try:
-        return fn(*args)
-    except Exception:
+    if (
+        not math.isfinite(value)
+        or value < 0
+        or (maximum is not None and value > maximum)
+    ):
         return None
+    return value
 
 
-def _mean(values):
-    vals = [v for v in values if v is not None]
-    return sum(vals) / len(vals) if vals else None
+def choose_record(payload, d, primary_key=None):
+    records = payload if isinstance(payload, list) else [payload]
+    records = [
+        r for r in records if isinstance(r, dict) and r.get("calendarDate", d) == d
+    ]
+    if primary_key:
+        primary = [r for r in records if r.get(primary_key) is True]
+        if primary:
+            records = primary
+    return max(
+        records,
+        key=lambda r: str(r.get("timestampLocal") or r.get("timestamp") or ""),
+        default={},
+    )
 
 
 def fetch_day(garmin, d):
-    """Fetch one day's health bundle. Each endpoint fails independently."""
-    bundle = {k: None for k in ("date", "steps", "calories", "resting_hr", "stress_avg",
-                                "body_battery_high", "body_battery_low", "spo2_avg",
-                                "respiration_avg", "sleep_seconds", "sleep_score",
-                                "sleep_deep_s", "sleep_rem_s", "sleep_light_s", "sleep_awake_s",
-                                "hrv_last_night", "hrv_weekly_avg", "hrv_baseline_low",
-                                "hrv_baseline_high", "training_readiness")}
-    bundle["date"] = d
-    stats = safe(garmin, "get_stats", d) or {}
-    bundle["steps"] = stats.get("totalSteps")
-    bundle["calories"] = stats.get("activeKilocalories") or stats.get("calories")
-    bundle["resting_hr"] = stats.get("restingHeartRate")
-    hrv = safe(garmin, "get_hrv_data", d)
+    values = {"date": d}
+    errors = []
+
+    def call(name):
+        try:
+            return getattr(garmin, name)(d)
+        except Exception as exc:
+            errors.append(f"{name}: {type(exc).__name__}")
+            return None
+
+    stats = call("get_stats")
+    if isinstance(stats, dict):
+        for field, key in {
+            "steps": "totalSteps",
+            "steps_goal": "dailyStepGoal",
+            "active_calories": "activeKilocalories",
+            "total_calories": "totalKilocalories",
+            "resting_hr": "restingHeartRate",
+            "stress_avg": "averageStressLevel",
+            "body_battery_high": "bodyBatteryHighestValue",
+            "body_battery_low": "bodyBatteryLowestValue",
+        }.items():
+            values[field] = number(stats.get(key))
+        values["calories"] = values["active_calories"]
+        moderate, vigorous = (
+            number(stats.get("moderateIntensityMinutes")),
+            number(stats.get("vigorousIntensityMinutes")),
+        )
+        values["intensity_minutes"] = (
+            moderate + 2 * vigorous
+            if moderate is not None and vigorous is not None
+            else None
+        )
+    hrv = call("get_hrv_data")
     if isinstance(hrv, dict):
-        # Canonical values live in hrvSummary; older responses expose them top-level.
-        summary = hrv.get("hrvSummary") if isinstance(hrv.get("hrvSummary"), dict) else hrv
-        base = summary.get("baseline") or {}
-        bundle["hrv_last_night"] = summary.get("lastNightAvg")
-        bundle["hrv_weekly_avg"] = summary.get("weeklyAvg")
-        # Upstream baseline aliases: balancedLow/balancedUpper bound the balanced
-        # band; lowUpper tops the low band. Fall back to low/high if ever present.
-        bundle["hrv_baseline_low"] = base.get("balancedLow", base.get("low"))
-        bundle["hrv_baseline_high"] = base.get("balancedUpper", base.get("high"))
-
-    sleep = safe(garmin, "get_sleep_data", d) or {}
-    dto = sleep.get("dailySleepDTO") or {}
-    bundle["sleep_seconds"] = dto.get("sleepTimeSeconds")
-    score = (dto.get("sleepScores") or {}).get("overall") or {}
-    bundle["sleep_score"] = score.get("value")
-    # Stage breakdown powers the stacked sleep chart; absent stages stay NULL.
-    bundle["sleep_deep_s"] = dto.get("deepSleepSeconds")
-    bundle["sleep_rem_s"] = dto.get("remSleepSeconds")
-    bundle["sleep_light_s"] = dto.get("lightSleepSeconds")
-    bundle["sleep_awake_s"] = dto.get("awakeSleepSeconds")
-
-    stress = safe(garmin, "get_stress_data", d)
-    if isinstance(stress, dict):
-        bundle["stress_avg"] = stress.get("avgStressLevel")
-        if bundle["stress_avg"] is None and isinstance(stress.get("stressArray"), list):
-            bundle["stress_avg"] = _mean([p.get("stress_level") for p in stress["stressArray"]
-                                          if isinstance(p, dict)])
-
-    bb = safe(garmin, "get_body_battery", d)
-    if isinstance(bb, list) and bb:
-        latest = bb[-1] or {}
-        # highest/lowest are levels; charged/drained are deltas and must not
-        # be stored as levels when the summary fields are absent.
-        bundle["body_battery_high"] = latest.get("highest")
-        bundle["body_battery_low"] = latest.get("lowest")
-
-    spo2 = safe(garmin, "get_spo2_data", d)
-    bundle["spo2_avg"] = extract_spo2(spo2)
-
-    resp = safe(garmin, "get_respiration_data", d)
-    if isinstance(resp, dict):
-        bundle["respiration_avg"] = resp.get("avg") or resp.get("averageValue")
-
-    tr = safe(garmin, "get_training_readiness", d)
-    bundle["training_readiness"] = extract_readiness(tr)
-
-    bundle["extracted_json"] = json.dumps({k: v for k, v in bundle.items() if k != "extracted_json"})
-    return bundle
-
-
-def extract_readiness(tr):
-    """Training readiness arrives as a list, dict, or dict-wrapped list depending on endpoint."""
-    if isinstance(tr, list) and tr:
-        return (tr[0] or {}).get("score") if isinstance(tr[0], dict) else None
-    if isinstance(tr, dict):
-        if tr.get("score") is not None:
-            return tr.get("score")
-        for v in tr.values():
-            if isinstance(v, list) and v and isinstance(v[0], dict):
-                return v[0].get("score")
-    return None
-
-
-def extract_spo2(spo2):
+        summary = hrv.get("hrvSummary") or {}
+        baseline = summary.get("baseline") or {}
+        for field, key in [
+            ("hrv_last_night", "lastNightAvg"),
+            ("hrv_weekly_avg", "weeklyAvg"),
+        ]:
+            values[field] = number(summary.get(key))
+        values["hrv_baseline_low"] = number(baseline.get("balancedLow"))
+        values["hrv_baseline_high"] = number(baseline.get("balancedUpper"))
+        values["hrv_status"] = (
+            summary.get("status")
+            if summary.get("status") not in (None, "NONE", "UNKNOWN")
+            else None
+        )
+    sleep = call("get_sleep_data")
+    if isinstance(sleep, dict):
+        dto = sleep.get("dailySleepDTO") or {}
+        for field, key in [
+            ("sleep_seconds", "sleepTimeSeconds"),
+            ("sleep_deep_s", "deepSleepSeconds"),
+            ("sleep_rem_s", "remSleepSeconds"),
+            ("sleep_light_s", "lightSleepSeconds"),
+            ("sleep_awake_s", "awakeSleepSeconds"),
+        ]:
+            values[field] = number(dto.get(key))
+        values["sleep_score"] = number(
+            ((dto.get("sleepScores") or {}).get("overall") or {}).get("value"), 100
+        )
+    battery = call("get_body_battery")
+    if isinstance(battery, list):
+        entry = next(
+            (b for b in battery if isinstance(b, dict) and b.get("date") == d), {}
+        )
+        descriptors = {
+            v.get("bodyBatteryValueDescriptorKey"): v.get(
+                "bodyBatteryValueDescriptorIndex"
+            )
+            for v in (entry.get("bodyBatteryValueDescriptorDTOList") or [])
+            if isinstance(v, dict)
+        }
+        idx = descriptors.get("bodyBatteryLevel", 1)
+        readings = [
+            r
+            for r in (entry.get("bodyBatteryValuesArray") or [])
+            if isinstance(r, list) and len(r) > idx and number(r[idx], 100) is not None
+        ]
+        if readings:
+            readings.sort(key=lambda r: r[0])
+            levels = [r[idx] for r in readings]
+            values["body_battery_current"] = levels[-1]
+            values["body_battery_high"] = max(levels)
+            values["body_battery_low"] = min(levels)
+            values["body_battery_updated_at"] = entry.get("endTimestampLocal")
+        else:
+            values["body_battery_current"] = None
+    spo2 = call("get_spo2_data")
     if isinstance(spo2, dict):
-        for key in ("average", "avgValue", "lastNightAvg"):
-            if spo2.get(key) is not None:
-                return spo2[key]
-        readings = spo2.get("readings") or spo2.get("spo2Values") or []
-        return _mean([r.get("value") for r in readings if isinstance(r, dict)]) or None
-    if isinstance(spo2, list):
-        return _mean([r.get("value") for r in spo2 if isinstance(r, dict)]) or None
-    return None
+        values["spo2_avg"] = number(spo2.get("averageSpO2"), 100)
+    respiration = call("get_respiration_data")
+    if isinstance(respiration, dict):
+        values["respiration_avg"] = number(respiration.get("avgWakingRespirationValue"))
+    readiness = call("get_training_readiness")
+    if readiness is not None:
+        r = choose_record(readiness, d, "primaryActivityTracker")
+        values["training_readiness"] = number(r.get("score"), 100)
+        values["training_readiness_level"] = r.get("level")
+        values["readiness_updated_at"] = r.get("timestampLocal")
+        recovery = number(r.get("recoveryTime"))
+        values["recovery_time_hours"] = (
+            round(recovery / 60, 2) if recovery is not None else None
+        )
+        values["acute_load"] = number(r.get("acuteLoad"))
+    status = call("get_training_status")
+    if isinstance(status, dict):
+        records = (
+            (status.get("mostRecentTrainingStatus") or {}).get(
+                "latestTrainingStatusData"
+            )
+            or {}
+        ).values()
+        t = choose_record(list(records), d, "primaryTrainingDevice")
+        phrase = t.get("trainingStatusFeedbackPhrase")
+        # Garmin's phrase is exposed verbatim, not interpreted as a medical recommendation.
+        values["training_status"] = (
+            phrase if phrase and not phrase.startswith("NO_STATUS") else None
+        )
+        load = t.get("acuteTrainingLoadDTO") or {}
+        values["load_ratio"] = number(load.get("dailyAcuteChronicWorkloadRatio"))
+        if number(load.get("dailyTrainingLoadAcute")) is not None:
+            values["acute_load"] = load["dailyTrainingLoadAcute"]
+        vo2 = (status.get("mostRecentVO2Max") or {}).get("generic") or {}
+        # Never misdate Garmin's most-recent (possibly old) measurement as today's.
+        values["vo2_max"] = (
+            number(vo2.get("vo2MaxPreciseValue"))
+            if vo2.get("calendarDate") == d
+            else None
+        )
+    values["extracted_json"] = json.dumps(values)
+    return values, errors
 
 
 def extract_activity(a):
-    atype = a.get("activityType") or {}
     return {
         "activity_id": a.get("activityId"),
         "name": a.get("activityName"),
-        "type": atype.get("typeKey"),
+        "type": (a.get("activityType") or {}).get("typeKey"),
         "start_local": a.get("startTimeLocal"),
         "start_iso": a.get("startTimeGMT"),
-        "duration_s": a.get("duration"),
-        "distance_m": a.get("distance"),
-        "calories": a.get("calories"),
-        "avg_hr": a.get("averageHR"),
-        "max_hr": a.get("maxHR"),
-        "elevation_m": a.get("elevationGain"),
-        "raw_json": None,
+        "duration_s": number(a.get("duration")),
+        "distance_m": number(a.get("distance")),
+        "calories": number(a.get("calories")),
+        "avg_hr": number(a.get("averageHR")),
+        "max_hr": number(a.get("maxHR")),
+        "elevation_m": number(a.get("elevationGain")),
     }
 
 
-def fetch_splits(garmin, activity_id):
-    """Per-split pace/HR for one activity. Shape varies; parse defensively."""
-    raw = safe(garmin, "get_activity_split_summaries", activity_id)
-    if not raw:
-        return []
-    if isinstance(raw, dict):
-        raw = raw.get("splitSummaries") or raw.get("splits") or []
-    splits = []
-    for i, s in enumerate(raw if isinstance(raw, list) else []):
-        if not isinstance(s, dict):
+def sync_real(garmin, conn, days, force=False, quiet=False):
+    written, acts_written, errors = 0, 0, []
+    for d in store.iso_days_back(days):
+        if (
+            store.get_day(conn, d)
+            and not force
+            and d < (date.today() - timedelta(days=1)).isoformat()
+        ):
             continue
-        dist = s.get("distance") or s.get("totalDistance")
-        dur = s.get("duration") or s.get("totalDuration")
-        if not dist or not dur:
-            continue
-        pace = (dur / dist) * 1000.0 if dist else None  # seconds per km
-        splits.append({
-            "distance_m": dist,
-            "duration_s": dur,
-            "avg_hr": s.get("averageHR") or s.get("hrAverage"),
-            "pace_s_per_km": round(pace, 1) if pace else None,
-        })
-    return splits
-
-
-def sync_real(garmin, conn, days, force, quiet):
-    store.clear_demo(conn)  # demo rows never survive a real sync
-    written = 0
-    skipped = 0
-    today = date.today().isoformat()
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-    for d in iso_days_back(days):
-        existing = store.get_day(conn, d)
-        if existing and not force and d not in (today, yesterday):
-            skipped += 1
-            continue
-        try:
-            bundle = fetch_day(garmin, d)
-        except Exception as e:  # keep going; one bad day must not kill the backfill
-            if not quiet:
-                print(f"  ! {d}: {type(e).__name__}: {e}")
-            continue
-        store.upsert_day(conn, bundle, source="garmin")
-        written += 1
-
-    acts_written = 0
+        values, failures = fetch_day(garmin, d)
+        errors.extend(f"{d} {e}" for e in failures)
+        if len(values) > 2:
+            # Missing keys mean a failed endpoint: preserve those existing values.
+            store.upsert_day(conn, values, source="garmin")
+            written += 1
     try:
-        acts = garmin.get_activities(0, 100) or []
-    except Exception:
-        acts = []
-    run_ids = []
-    for a in acts:
-        if not isinstance(a, dict) or a.get("activityId") is None:
-            continue
-        extracted = extract_activity(a)
-        store.upsert_activity(conn, extracted, source="garmin")
-        acts_written += 1
-        if (extracted.get("type") in RUN_TYPES or "run" in (extracted.get("name") or "").lower()):
-            run_ids.append(extracted["activity_id"])
-
-    splits_fetched = 0
-    for aid in run_ids[:SPLIT_FETCH_CAP]:
-        if store.has_splits(conn, aid):
-            continue
-        splits = fetch_splits(garmin, aid)
-        if splits:
-            store.replace_splits(conn, aid, splits)
-            splits_fetched += 1
-
-    store.log_sync(conn, "garmin", days, written, acts_written, ok=True)
+        for a in garmin.get_activities(0, 100) or []:
+            if isinstance(a, dict) and a.get("activityId") is not None:
+                store.upsert_activity(conn, extract_activity(a), source="garmin")
+                acts_written += 1
+    except Exception as exc:
+        errors.append(f"get_activities: {type(exc).__name__}")
+    store.log_sync(
+        conn,
+        "garmin",
+        days,
+        written,
+        acts_written,
+        ok=not errors,
+        error="; ".join(errors) or None,
+    )
     if not quiet:
-        print(f"Synced {written} days ({skipped} cached), {acts_written} activities, "
-              f"{splits_fetched} new run split sets.")
-        print("Next:  .venv\\Scripts\\python serve.py")
-
-
-def _demo_splits(rnd, base_pace_s, fade_s, hr_base):
-    """5 x 1 km splits with realistic fatigue fade."""
-    splits = []
-    for i in range(5):
-        pace = base_pace_s + fade_s * i + rnd.uniform(-3, 3)
-        dist = 1000.0 + rnd.uniform(-8, 8)
-        splits.append({
-            "distance_m": dist,
-            "duration_s": dist * pace / 1000.0,
-            "avg_hr": hr_base + i * 2 + rnd.randint(-2, 2),
-            "pace_s_per_km": round(pace, 1),
-        })
-    return splits
-
-
-def seed_demo(conn, days, quiet):
-    """Deterministic, clearly-marked demo dataset shaped so every insight rule can fire."""
-    if store.has_real_data(conn):
-        print("Real Garmin data exists; refusing to add demo rows. "
-              "Use --clear-demo first if you really want demo data.")
-        return
-    rnd = random.Random(42)
-    today = date.today()
-    for i, d in enumerate(iso_days_back(days)):
-        idx_from_end = days - 1 - i
-        improving = idx_from_end / max(1, days - 1)  # 1.0 = oldest, 0.0 = today
-        sleep_h = rnd.uniform(6.4, 8.4) - 0.35 * improving
-        hrv = int(rnd.uniform(52, 60) + 6 * (1 - improving))
-        hrv_weekly_base = 55 + 5 * (1 - improving)  # smooth band the daily value wobbles inside
-        rhr = int(rnd.uniform(49, 53) - 2 * (1 - improving))
-        bb_high = int(rnd.uniform(78, 98) + 8 * (1 - improving))
-        total_s = int(sleep_h * 3600)
-        deep_s = int(total_s * rnd.uniform(0.14, 0.20))
-        rem_s = int(total_s * rnd.uniform(0.20, 0.25))
-        awake_s = int(900 + rnd.uniform(0, 900))
-        light_s = max(0, total_s - deep_s - rem_s - awake_s)
-        store.upsert_day(conn, {
-            "date": d,
-            "steps": int(rnd.uniform(6500, 14500)),
-            "calories": int(rnd.uniform(550, 950)),
-            "resting_hr": rhr,
-            "stress_avg": round(rnd.uniform(24, 44) - 4 * (1 - improving), 0),
-            "body_battery_high": bb_high,
-            "body_battery_low": int(rnd.uniform(12, 30)),
-            "spo2_avg": round(rnd.uniform(94.5, 97.5), 1),
-            "respiration_avg": round(rnd.uniform(13.2, 15.4), 1),
-            "sleep_seconds": int(sleep_h * 3600),
-            "sleep_score": int(rnd.uniform(62, 88)),
-            "sleep_deep_s": deep_s,
-            "sleep_rem_s": rem_s,
-            "sleep_light_s": light_s,
-            "sleep_awake_s": awake_s,
-            "hrv_last_night": hrv,
-            "hrv_weekly_avg": round(hrv + rnd.uniform(-2, 2), 1),
-            "hrv_baseline_low": int(hrv_weekly_base - 5),
-            "hrv_baseline_high": int(hrv_weekly_base + 6),
-            "training_readiness": int(rnd.uniform(58, 92) + 6 * (1 - improving)),
-            "extracted_json": json.dumps({"demo": True}),
-        }, source="demo")
-
-    # Runs across 4 weeks: pace at the same HR improves ~5%; mild fade inside each run.
-    run_days = [3, 10, 17, 24]
-    for k, back in enumerate(run_days):
-        d = (today - timedelta(days=back)).isoformat()
-        base_pace = 335 + k * 9  # k=0 most recent (~5:43/km mean), oldest ~6:10/km
-        aid = f"demo-run-{k}"
-        start = f"{d} 07:{10 + k:02d}:00"
-        store.upsert_activity(conn, {
-            "activity_id": aid,
-            "name": f"Easy run {k + 1}",
-            "type": "running",
-            "start_local": start,
-            "start_iso": f"{d}T07:{10 + k:02d}:00.00",
-            "duration_s": 5 * (base_pace + 8),
-            "distance_m": 5000.0,
-            "calories": 420 + k * 5,
-            "avg_hr": 149 + k,
-            "max_hr": 168 + k,
-            "elevation_m": 18 + k * 4,
-            "raw_json": json.dumps({"demo": True}),
-        }, source="demo")
-        store.replace_splits(conn, aid, _demo_splits(rnd, base_pace, 4, 148 + k))
-    # Mixed sessions spread evenly across weeks (mostly easy intensity).
-    for k, (back, name, atype, dur, avg_hr) in enumerate([
-            (4, "Strength - lower body", "strength_training", 2700, 138),
-            (6, "Row", "indoor_rowing", 1500, 128),
-            (9, "HYROX circuit", "hiit", 3120, 149),
-            (12, "Strength - upper body", "strength_training", 2400, 132),
-            (13, "Easy spin", "cycling", 2400, 125),
-            (16, "Recovery walk", "walking", 3600, 98),
-            (20, "Recovery spin", "cycling", 1800, 118)]):
-        d = (today - timedelta(days=back)).isoformat()
-        store.upsert_activity(conn, {
-            "activity_id": f"demo-x-{k}",
-            "name": name,
-            "type": atype,
-            "start_local": f"{d} 18:30:00",
-            "start_iso": f"{d}T18:30:00.00",
-            "duration_s": dur,
-            "distance_m": None,
-            "calories": int(dur / 60 * rnd.uniform(7, 11)),
-            "avg_hr": avg_hr,
-            "max_hr": avg_hr + rnd.randint(18, 30),
-            "elevation_m": None,
-            "raw_json": json.dumps({"demo": True}),
-        }, source="demo")
-
-    log_day = (today - timedelta(days=2)).isoformat()
-    log_day2 = (today - timedelta(days=8)).isoformat()
-
-    for e in [
-        {"date": log_day, "session": "strength", "exercise": "Front squat", "sets": 4, "reps": 6,
-         "load_kg": 82.5, "rpe": 9, "soreness": 6, "notes": "heavy lower body"},
-        {"date": log_day, "session": "strength", "exercise": "Wall balls", "sets": 5, "reps": 20,
-         "load_kg": 9, "rpe": 8, "soreness": 5, "notes": None},
-        {"date": log_day2, "session": "strength", "exercise": "Deadlift", "sets": 5, "reps": 5,
-         "load_kg": 120, "rpe": 9, "soreness": 7, "notes": "heavy lower body"},
-        {"date": (today - timedelta(days=6)).isoformat(), "session": "run", "exercise": "5x1km",
-         "sets": 5, "reps": 1, "load_kg": None, "rpe": 7, "soreness": 2, "notes": "controlled HR"},
-    ]:
-        store.add_log_entry(conn, e, source="demo")
-
-    store.log_sync(conn, "demo", days, days, 11, ok=True)
-    if not quiet:
-        print(f"Demo data written: {days} days, 11 activities, 4 run split sets, 4 log entries.")
-        print("This is synthetic data. A real sync removes it automatically, or run: "
-              ".venv\\Scripts\\python sync.py --clear-demo")
+        print(
+            f"Synced {written} days, {acts_written} activities; {len(errors)} endpoint errors."
+        )
+        for e in errors:
+            print(e)
+    return not errors
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Sync Garmin Connect data to local SQLite.")
-    ap.add_argument("--days", type=int, default=30, help="days to backfill (default 30)")
-    ap.add_argument("--force", action="store_true", help="refetch all days, ignoring cache")
-    ap.add_argument("--demo", action="store_true", help="seed clearly-marked demo data (no account needed)")
-    ap.add_argument("--clear-demo", action="store_true", help="remove demo rows")
+    import msvcrt
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--days", type=int, default=30)
+    ap.add_argument("--force", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
+    if not 1 <= args.days <= 365:
+        ap.error("--days must be between 1 and 365")
+    from garmin_client import connect
 
-    conn = store.connect_db()
-    try:
-        if args.clear_demo:
-            n = store.clear_demo(conn)
-            store.log_sync(conn, "clear-demo", 0, -n, 0, ok=True)
-            print(f"Demo rows cleared: {n}")
-            return
-        if args.demo:
-            seed_demo(conn, max(14, min(args.days, 90)), args.quiet)
-            return
-        from garmin_client import connect
-        garmin = connect(interactive=not args.quiet)
-        sync_real(garmin, conn, args.days, args.force, args.quiet)
-    except KeyboardInterrupt:
-        sys.exit("Interrupted.")
-    except SystemExit:
-        raise
-    except Exception as e:
-        store.log_sync(conn, "error", args.days, 0, 0, ok=False, error=f"{type(e).__name__}: {e}")
-        raise
+    store.DATA_DIR.mkdir(exist_ok=True)
+    with (store.DATA_DIR / "sync.lock").open("a+b") as lock:
+        lock.seek(0)
+        try:
+            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            print("A Garmin sync is already running.")
+            sys.exit(2)
+        try:
+            conn = store.connect_db()
+            try:
+                garmin = connect(interactive=not args.quiet)
+                success = sync_real(garmin, conn, args.days, args.force, args.quiet)
+            finally:
+                conn.close()
+        finally:
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+    if not success:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

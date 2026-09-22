@@ -16,3 +16,7 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Cloud credentials and deployment metadata
+.vercel/
+.env*

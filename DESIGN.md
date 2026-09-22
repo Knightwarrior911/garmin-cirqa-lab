@@ -1,47 +1,36 @@
-# DESIGN.md
+# Dashboard design
 
-## Theme
+Light neutral background, white metric surfaces, a deep-green readiness panel and pale green/blue Body Battery and sleep panels. Data colors remain consistent across icons, card accents and charts. System font and inline SVG; no remote fonts, icon packages, gradients, animations or decorative gauges.
 
-Light. Scene: an athlete at a bright kitchen counter in the morning, laptop open,
-coffee, checking recovery before training. Light is forced by the scene.
+## Hierarchy
 
-## Color
+- Header: CIRQA / Garmin Connect, last successful sync, Sync now.
+- Three primary panels: native training readiness, Body Battery, sleep with labeled stages.
+- Compact health/movement grid, followed by supported Garmin training metrics.
+- Two-column chart layout on desktop; single column on smaller screens.
+- Six activity cards in two columns on desktop and one on mobile, linking to dedicated detail pages. Keep deep activity analysis off the homepage.
 
-Page surface `#f7f7f5` (warm-tinted off-white, never #fff). Ink `#1d1d1f`.
-Secondary text `#86868b`. Hairlines `rgba(0,0,0,.09)`.
+## Data visualization
 
-Strategy: Restrained. One accent (Apple blue `#0071e3`) for interactive elements only.
-Data colors are semantic and muted:
+- Native scores use 0–100 domains. Body Battery uses floating daily low/high bars.
+- Sleep and steps use bars; HRV, resting HR and respiration use lines.
+- Every chart uses calendar-spaced dates and preserves missing-day gaps.
+- Detailed seven-day charts label every observation; longer views label spaced extrema and the latest value.
+- Units, recorded-day counts, latest date, hover titles and expandable value tables provide context.
+- Data colors identify series, not unsupported diagnoses. No custom recovery score or generic recommendations.
+- Hero and health cards include seven-calendar-day mini charts, with visible date spans and recorded-day counts. Missing days break lines; absent history has an explicit empty state. Mini charts complement rather than replace the detailed charts and value tables.
+- Step progress uses the Garmin goal from the same dated record. Hide the progress bar for missing or zero goals; cap only its visual width, not the displayed percentage.
 
-- good/recovery green `#2f9e5f`
-- watch amber `#d9962b`
-- rest red `#d64545`
-- sleep deep `#3573b9`, REM `#6f9fd8`, light `#b8d49a`, awake `#d98a80`
-- body battery `#7fb069`, steps `#7d9bb5`
+## Freshness and interaction
 
-## Typography
+Date every metric. Add native recorded times for readiness and Body Battery. Historical latest values are never labeled today. Distinguish last successful cloud fetch from the sensor reading time. Readiness/recovery values are recorded snapshots, not live countdowns.
 
-System stack: `-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable",
-"Segoe UI", sans-serif`. One family everywhere. Sentence case; no uppercase microcopy.
+Refresh controls are keyboard accessible. Keep a selected chart range across refreshes. Unchanged polling responses do not rebuild the page or collapse value tables. Empty, unavailable and error states are explicit. Escape external strings before inserting HTML. Test narrow-screen overflow and 7/28/90-day controls.
 
-Scale (fixed px): hero numeral 64/600/-0.035em · block numeral 40/600/-0.03em ·
-section title 15/600 · body 14/400 · label 12/400 `#86868b` · micro 11/400.
-Tabular numerals on all data values.
+## Activity detail surface
 
-## Layout
+Four primary native statistics, expandable additional values, then aligned recording charts. Reuse the homepage palette and spacing. All chart panels share a time/distance axis, selection window and hover cursor. SVG dimensions follow the container so labels remain readable on mobile.
 
-Max width 1080px. Section rhythm 56px. Hairline dividers instead of boxes wherever
-possible. Hero row is asymmetric: Recovery dominant left, Sleep and Load stacked right,
-single vertical hairline between. No nested cards.
+Pace is positioned on an equal-speed scale to preserve near-stationary samples without flattening the moving portions; exact pace values remain available on hover. Nonnegative metrics never have negative axis labels. Do not connect missing readings or gaps longer than 30 seconds.
 
-## Components
-
-- Segmented control: track `#e8e8ed`, selected pill white with subtle shadow.
-- Inputs: white surface, hairline border, blue focus ring.
-- Insight rows: hairline-separated list, severity dot, chevron expand.
-- Buttons: `#0071e3` primary, radius 8px.
-
-## Motion
-
-150-250ms ease-out. Hover tints, expand transitions, one 180ms page fade.
-No orchestrated load sequences.
+Native zones, laps, typed intervals, strength sets and an optional local GPS trace follow the charts. Comparison uses explicit units; pace and speed are separate rows across different sports. Missing streams and partial download failures remain visible. No inferred interval classification, performance ranking or coaching.

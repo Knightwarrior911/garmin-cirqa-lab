@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Activity · CIRQA</title>
+    <meta name="theme-color" content="#204e40" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="CIRQA" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script src="/pwa.js" defer></script>
+    <link rel="stylesheet" href="/activity.css" />
+    <script src="/activity.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <a class="brand" href="/">CIRQA <span>Garmin dashboard</span></a
+        ><a href="/">Back to overview</a>
+      </header>
+      <section class="heading">
+        <div>
+          <p class="eyebrow" id="kind">Activity history</p>
+          <h1 id="title">Your activities</h1>
+          <p class="note" id="date">Native Garmin recordings and saved history.</p>
+        </div>
+        <a
+          id="garmin"
+          class="button"
+          target="_blank"
+          rel="noopener noreferrer"
+          hidden
+          >Open in Garmin Connect ↗</a
+        >
+      </section>
+      <div class="browser">
+        <label
+          >Open activity<select id="browse">
+            <option>Loading history…</option>
+          </select></label
+        ><a href="/activities">All activities</a>
+      </div>
+      <p id="status" role="status" aria-live="polite">Loading…</p>
+      <section id="history" hidden>
+        <label
+          >Filter history<input
+            id="search"
+            type="search"
+            placeholder="Name, activity type or date"
+        /></label>
+        <p class="note" id="history-count"></p>
+        <div id="history-list"></div>
+      </section>
+      <div id="detail" hidden>
+        <section
+          id="stats"
+          class="stats"
+          aria-label="Activity summary"
+        ></section>
+        <div class="sectionhead">
+          <p id="cache" class="note"></p>
+          <button id="refresh" type="button">Refresh activity</button>
+        </div>
+        <details id="more-summary">
+          <summary>More recorded statistics</summary>
+          <div id="stats-more" class="stats"></div>
+        </details>
+        <div id="notices" class="note"></div>
+        <section class="section card" id="chart-section">
+          <div class="sectionhead">
+            <div>
+              <h2>Recording</h2>
+              <p class="note">
+                Aligned streams. Hover or tap to inspect; use the sliders to
+                select a section.
+              </p>
+            </div>
+            <div class="segments">
+              <button id="time-axis" aria-pressed="true">Time</button
+              ><button id="distance-axis" aria-pressed="false">Distance</button>
+            </div>
+          </div>
+          <div id="metric-toggles" class="toggles"></div>
+          <div id="charts"></div>
+          <div id="sample" class="sample" aria-live="polite">
+            Move over a chart to inspect one sample.
+          </div>
+          <div class="selection">
+            <label
+              >Section start<input
+                id="section-start"
+                type="range"
+                min="0"
+                max="1000"
+                value="0" /></label
+            ><label
+              >Section end<input
+                id="section-end"
+                type="range"
+                min="0"
+                max="1000"
+                value="1000" /></label
+            ><button id="reset">Full activity</button>
+          </div>
+          <p id="segment-summary" class="note"></p>
+          <p id="sampling" class="note"></p>
+        </section>
+        <div class="columns section">
+          <section class="card">
+            <h2>Heart-rate zones</h2>
+            <p class="note">
+              Garmin's recorded zones, not age-based estimates.
+            </p>
+            <div id="zones"></div>
+          </section>
+          <section class="card">
+            <h2>Recorded route</h2>
+            <p class="note">
+              Local trace only. No external maps or location requests.
+            </p>
+            <div id="route"></div>
+          </section>
+        </div>
+        <section class="section card">
+          <h2>Laps & splits</h2>
+          <p class="note">
+            Recorded laps only. A single lap is not treated as an interval
+            workout.
+          </p>
+          <div id="laps" class="table-wrap"></div>
+          <div id="intervals"></div>
+        </section>
+        <section id="sets-section" class="section card" hidden>
+          <h2>Strength sets</h2>
+          <div id="sets" class="table-wrap"></div>
+        </section>
+        <section class="section card">
+          <div class="sectionhead">
+            <div>
+              <h2>Compare a session</h2>
+              <p class="note">
+                Native summary values side by side. Different activity types are
+                not ranked.
+              </p>
+            </div>
+          </div>
+          <label
+            >Comparison activity<select id="compare">
+              <option value="">Choose another session</option>
+            </select></label
+          >
+          <p id="compare-status" role="status"></p>
+          <div id="comparison" class="table-wrap"></div>
+        </section>
+      </div>
+      <footer>
+        Private history · Missing readings stay missing · No invented readiness,
+        recovery or performance scores
+      </footer>
+    </main>
+  </body>
+</html>

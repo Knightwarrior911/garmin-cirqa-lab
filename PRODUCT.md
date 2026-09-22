@@ -1,35 +1,26 @@
-# PRODUCT.md
+# Product
 
-## Users
+## Purpose
 
-- Primary: a HYROX athlete wearing a Garmin CIRQA band, checking the dashboard once or
-  twice a day (morning recovery check, post-workout review) on a laptop or phone.
-- Secondary: a family member operating the collector machine; AI agents maintaining the
-  pipeline via AGENTS.md.
+A quick, readable view of the owner's Garmin Connect measurements: training readiness, Body Battery, sleep, HRV, heart rate, stress and daily movement. The product reports what Garmin measured, not what a generic coach thinks the owner should do.
 
-## Product Purpose
+## Daily flow
 
-A private, local dashboard that turns Garmin CIRQA health data into a daily training
-decision: train hard, go steady, or recover. It answers three questions fast: How
-recovered am I right now? How far did I push this week? What should I change?
+Sync the band to Garmin Connect on iPhone. Open the private cloud dashboard from its iPhone home-screen icon, or use CIRQA Dashboard on Windows. Read current measurements, check dated trends, optionally review activities. Both paths request throttled Garmin refresh and show when it last succeeded. Cloud mode requires owner authentication and durable private storage; it must not depend on the PC staying on or replace real data with a demo.
 
-## Tone
+## Information hierarchy
 
-Calm, confident, precise. Apple-keynote clarity: enormous numerals, generous air, one
-idea at a time. Consumer-ready; something you would show a friend without apologizing.
+1. Native Garmin training readiness, Body Battery and sleep.
+2. HRV, resting heart rate, stress and steps.
+3. Other supported Garmin metrics, including native load and recovery time.
+4. Labeled calendar-spaced charts.
+5. Compact recent activities.
 
-## Anti-references
+## Rules
 
-- Whoop / Oura dark-neon clones (black surface, lime glow, gamer energy)
-- SaaS admin density: boxed panels inside panels, uppercase monospace microcopy
-- Anything that reads as machine-generated: gradient accents, glow dots, chip spam
-
-## Strategic principles
-
-- The day's decision is the product. Everything else supports it.
-- Numbers over decoration; one accent color, data colors only where they carry meaning.
-- Honest by design: insights state observed pattern, hypothesis, confirming test.
-
-## Register
-
-product
+- No invented recovery score, proxy training load, generic health advice or motivational copy.
+- No placeholders masquerading as measurements. Missing means missing; zero remains zero.
+- Each metric carries its date. Older account history is not claimed to come from the CIRQA.
+- Show units and data labels, preserve chart gaps, provide accessible recorded-value tables.
+- Do not delete health history to simplify the display.
+- Cloud freshness is not direct live wrist streaming.
