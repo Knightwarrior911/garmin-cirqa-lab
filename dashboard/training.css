@@ -1,15 +1,15 @@
 :root {
-  color-scheme: light;
-  --bg: #f3f6fb;
-  --paper: #fff;
-  --ink: #14213b;
-  --muted: #56657a;
-  --line: #e1e7ef;
-  --blue: #246bfd;
-  --navy: #12213b;
-  --lime: #d3f56a;
-  --purple: #e8e2ff;
-  --radius: 24px;
+  color-scheme: dark;
+  --bg: #080a0d;
+  --paper: #14181e;
+  --ink: #f4f7fa;
+  --muted: #a0adbf;
+  --line: #29313c;
+  --blue: #5edfff;
+  --navy: #10151c;
+  --lime: #a3ff12;
+  --purple: #b09aff;
+  --radius: 16px;
   font-family:
     Inter,
     ui-sans-serif,
@@ -30,7 +30,7 @@ body {
 main {
   max-width: 1160px;
   margin: auto;
-  padding: 24px 32px 48px;
+  padding: 24px 32px 105px;
 }
 header {
   display: flex;
@@ -80,7 +80,7 @@ button {
   min-height: 44px;
 }
 button:hover {
-  background: #edf2fc;
+  background: #202832;
 }
 button:disabled {
   opacity: 0.5;
@@ -88,12 +88,12 @@ button:disabled {
 }
 button.primary {
   background: var(--blue);
-  color: #fff;
+  color: #080a0d;
   border-color: transparent;
   padding: 14px 20px;
 }
 button.primary:hover {
-  background: #1757d9;
+  background: #95ebff;
 }
 button.quiet {
   background: transparent;
@@ -106,7 +106,7 @@ summary:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #729bff;
+  outline: 3px solid #5edfff;
   outline-offset: 3px;
 }
 h1,
@@ -145,25 +145,31 @@ svg {
 }
 .app-nav {
   display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 14px;
-  margin-bottom: 30px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  justify-content: center;
+  gap: 28px;
+  border-top: 1px solid var(--line);
+  background: #0b0e12;
+  padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
 }
 .app-nav a {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
-  border-radius: 100px;
+  gap: 4px;
+  min-width: 74px;
+  padding: 3px 16px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 650;
 }
 .app-nav a[aria-current="page"] {
-  background: #e2ebff;
-  color: #154dc3;
+  color: var(--lime);
 }
 .app-nav svg {
   width: 20px;
@@ -189,11 +195,11 @@ svg {
 .goal-chip {
   white-space: nowrap;
   border-radius: 100px;
-  background: #e3eaff;
+  background: #1a252d;
   padding: 9px 13px;
   font-size: 12px;
   font-weight: 700;
-  color: #3457a0;
+  color: #5edfff;
 }
 .muted {
   color: var(--muted);
@@ -209,8 +215,8 @@ svg {
 }
 .error {
   padding: 16px;
-  background: #ffebe9;
-  color: #902b30;
+  background: #351c23;
+  color: #ffb2a4;
   border-radius: 12px;
   margin: 12px 0;
   overflow-wrap: anywhere;
@@ -241,6 +247,7 @@ svg {
 .session-card {
   background: var(--navy);
   color: white;
+  border: 1px solid var(--line);
   padding: 30px;
   border-radius: var(--radius);
   min-width: 0;
@@ -277,31 +284,31 @@ svg {
   font-size: 14px;
 }
 .session-card .primary {
-  color: #14213b;
+  color: #080a0d;
   background: var(--lime);
   width: 100%;
   margin: 18px 0 4px;
 }
 .session-card .primary:hover {
-  background: #e2ff8e;
+  background: #c0ff67;
 }
 .badge {
   display: inline-block;
   padding: 6px 10px;
   border-radius: 100px;
-  background: #31405a;
-  color: #e1eaff;
+  background: #24313e;
+  color: #d4e4fa;
   font-size: 11px;
   font-weight: 650;
   text-transform: capitalize;
 }
 .badge.rest {
-  background: #dce8f8;
-  color: #24486d;
+  background: #1b303c;
+  color: #5edfff;
 }
 .badge.caution {
-  background: #ffe6b6;
-  color: #755018;
+  background: #392b1a;
+  color: #ffbb60;
 }
 .demand-line {
   display: flex;
@@ -310,7 +317,7 @@ svg {
   padding: 14px 0;
   margin-top: 8px;
   font-size: 12px;
-  border-bottom: 1px solid #344259;
+  border-bottom: 1px solid var(--line);
   color: #bdcbe1;
 }
 .demand-line strong {
@@ -327,7 +334,7 @@ svg {
   position: relative;
   padding: 0 0 21px 42px;
   margin-top: 5px;
-  border-left: 1px solid #42506a;
+  border-left: 1px solid #394654;
   margin-left: 12px;
 }
 .steps li:last-child {
@@ -339,7 +346,7 @@ svg {
   position: absolute;
   left: -13px;
   top: -2px;
-  background: #344661;
+  background: #24313e;
   color: var(--lime);
   width: 26px;
   height: 26px;
@@ -360,7 +367,7 @@ svg {
 .session-foot {
   margin-top: 22px;
   padding-top: 16px;
-  border-top: 1px solid #344259;
+  border-top: 1px solid var(--line);
   font-size: 11px;
   color: #b7c7df;
 }
@@ -393,10 +400,10 @@ svg {
   min-width: 0;
 }
 .pace-card {
-  background: #e6edff;
+  background: #111c25;
 }
 .pace-card .eyebrow {
-  color: #375b9e;
+  color: #5edfff;
 }
 .pace-number {
   display: flex;
@@ -408,12 +415,13 @@ svg {
   font-size: 64px;
   font-weight: 750;
   letter-spacing: -3px;
+  color: #5edfff;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 .pace-number small {
   font-size: 14px;
-  color: #48608a;
+  color: #a0adbf;
 }
 .pace-card .muted {
   font-size: 12px;
@@ -427,7 +435,7 @@ svg {
   margin-top: 24px;
 }
 .run-volume {
-  background: #ece7ff;
+  background: #1b1728;
 }
 .volume-values {
   display: flex;
@@ -443,7 +451,7 @@ svg {
 .volume-values span {
   display: block;
   font-size: 11px;
-  color: #635d7c;
+  color: #b8aecf;
   margin-top: 3px;
 }
 .checkin-button {
@@ -454,7 +462,7 @@ svg {
   border: 0;
   border-radius: 18px;
   padding: 18px 22px;
-  background: white;
+  background: var(--paper);
 }
 .checkin-button strong {
   display: block;
@@ -494,13 +502,13 @@ svg {
   border-radius: 50%;
 }
 .metric-dot.blue {
-  background: #246bfd;
+  background: #5edfff;
 }
 .metric-dot.purple {
-  background: #9d79e9;
+  background: #b09aff;
 }
 .metric-dot.mint {
-  background: #1eaa8e;
+  background: #a3ff12;
 }
 .number {
   display: block;
@@ -563,15 +571,15 @@ svg {
   display: inline-block;
   font-size: 10px;
   margin-top: 7px;
-  color: #46658b;
-  background: #e9eff8;
+  color: #a0c8e8;
+  background: #1b2936;
   border-radius: 6px;
   padding: 3px 6px;
 }
 .segments {
   display: flex;
   gap: 3px;
-  background: #eff3fa;
+  background: #080a0d;
   padding: 4px;
   border-radius: 11px;
   flex-shrink: 0;
@@ -584,7 +592,7 @@ svg {
   font-size: 11px;
 }
 .segments button[aria-pressed="true"] {
-  background: #fff;
+  background: #24313e;
   color: var(--blue);
 }
 .chart {
@@ -610,10 +618,10 @@ svg {
   border-radius: 5px 5px 1px 1px;
 }
 .day-bar.unknown .bar {
-  background: #d3dbe8;
+  background: #475464;
 }
 .day-bar.partial .bar {
-  background: #e4a346;
+  background: #ffbb60;
 }
 .day-bar small {
   position: absolute;
@@ -756,10 +764,10 @@ dialog {
   padding: 28px;
   color: var(--ink);
   background: var(--paper);
-  box-shadow: 0 28px 100px #09172f38;
+  border: 1px solid #394450;
 }
 dialog::backdrop {
-  background: #0d1c3e88;
+  background: #000b;
   backdrop-filter: blur(4px);
 }
 .dialog-head {
@@ -777,7 +785,7 @@ dialog::backdrop {
   height: 40px;
   min-height: 40px;
   border: 0;
-  background: #f0f3f8;
+  background: #24313e;
   flex-shrink: 0;
 }
 .dialog-head h2 {
@@ -806,10 +814,10 @@ select,
 textarea {
   width: 100%;
   max-width: 100%;
-  border: 1px solid #d7e0ed;
+  border: 1px solid #394450;
   border-radius: 12px;
   padding: 12px;
-  background: #f8faff;
+  background: #080a0d;
   color: var(--ink);
   min-height: 46px;
   font-size: 15px;
@@ -855,12 +863,12 @@ textarea {
   font-size: 12px;
 }
 .weekdays input:checked + span {
-  background: #dce7ff;
-  border-color: #759bfa;
-  color: #184cbe;
+  background: #24351b;
+  border-color: #a3ff12;
+  color: #a3ff12;
 }
 .weekdays input:focus-visible + span {
-  outline: 3px solid #729bff;
+  outline: 3px solid #5edfff;
   outline-offset: 2px;
 }
 form button.primary {
@@ -872,13 +880,13 @@ form .small {
 }
 .form-result:not(:empty) {
   padding: 12px;
-  background: #eef3ff;
+  background: #1b303c;
   border-radius: 10px;
   margin: 14px 0 0;
 }
 .form-result[data-error="true"] {
-  background: #ffebe9;
-  color: #902b30;
+  background: #351c23;
+  color: #ffb2a4;
 }
 .routine-row {
   background: var(--bg);
@@ -937,33 +945,6 @@ form .small {
     font-size: 10px !important;
     padding: 7px !important;
     min-height: 36px;
-  }
-  .app-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 5;
-    margin: 0;
-    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
-    background: #ffffffed;
-    backdrop-filter: blur(16px);
-    border-top: 1px solid var(--line);
-    border-bottom: 0;
-    justify-content: space-around;
-  }
-  .app-nav a {
-    flex: 1;
-    flex-direction: column;
-    gap: 4px;
-    font-size: 10px;
-    padding: 6px 4px;
-    border-radius: 14px;
-    max-width: 110px;
-  }
-  .app-nav svg {
-    width: 21px;
-    height: 21px;
   }
   .page-heading {
     margin-top: 8px;
@@ -1171,5 +1152,87 @@ form .small {
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
+  }
+}
+.activity-launcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 22px 0 18px;
+}
+.activity-launcher button {
+  text-align: left;
+  padding: 16px;
+  border-radius: 12px;
+}
+.activity-launcher strong {
+  display: block;
+  color: var(--lime);
+  font-size: 17px;
+}
+.activity-launcher small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+#guide-open {
+  margin-top: 22px;
+  width: 100%;
+  border-color: var(--lime);
+  color: var(--lime);
+  background: transparent;
+}
+#guide-dialog {
+  background: #080a0d;
+}
+#guide-progress {
+  color: var(--blue);
+  margin-top: 28px;
+}
+#guide-step {
+  font-size: 24px;
+  margin: 12px 0;
+}
+#guide-clock {
+  display: block;
+  color: var(--lime);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(60px, 17vw, 95px);
+  line-height: 1.2;
+  font-weight: 750;
+  letter-spacing: -4px;
+  margin: 20px 0;
+}
+#guide-detail {
+  line-height: 1.7;
+  font-size: 14px;
+}
+#guide-state {
+  margin: 16px 0;
+}
+.guide-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+}
+.guide-controls .primary {
+  background: var(--lime);
+  color: #080a0d;
+}
+@media (max-width: 350px) {
+  .activity-launcher {
+    gap: 6px;
+  }
+  .activity-launcher button {
+    padding: 12px 8px;
+  }
+  .activity-launcher strong {
+    font-size: 15px;
+  }
+  .app-nav {
+    gap: 9px;
   }
 }

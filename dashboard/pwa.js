@@ -4,7 +4,8 @@ window.addEventListener("pageshow", (event) => {
   if (event.persisted) location.reload();
 });
 const safeArea = document.createElement("style");
-safeArea.textContent = "body{padding-top:env(safe-area-inset-top);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left)}.account-control{font:inherit;font-size:12px;padding:7px 10px;border:1px solid #dfe5df;border-radius:8px;background:white;color:#204e40;cursor:pointer;white-space:nowrap}.account-control:focus-visible{outline:3px solid #527ca4;outline-offset:3px}header{flex-wrap:wrap}";
+safeArea.textContent =
+  "body{padding-top:env(safe-area-inset-top);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left)}.account-control{font:inherit;font-size:12px;padding:7px 10px;border:1px solid #303944;border-radius:8px;background:#14181e;color:#f4f7fa;cursor:pointer;white-space:nowrap}.account-control:focus-visible{outline:3px solid #5edfff;outline-offset:3px}header{flex-wrap:wrap}";
 document.head.append(safeArea);
 (async () => {
   try {
@@ -13,7 +14,9 @@ document.head.append(safeArea);
     const health = await response.json();
     if (health.hosting !== "cloud") return;
     const footer = document.querySelector("footer");
-    if (footer) footer.textContent = "Private cloud history · Sync your CIRQA through Garmin Connect on iPhone to upload new readings. Cloud refresh runs daily and every 30 minutes while open. Safari → Share → Add to Home Screen.";
+    if (footer)
+      footer.textContent =
+        "Private cloud history · Sync your CIRQA through Garmin Connect on iPhone to upload new readings. Cloud refresh runs daily and every 30 minutes while open. Safari → Share → Add to Home Screen.";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "account-control";
@@ -21,7 +24,10 @@ document.head.append(safeArea);
     button.onclick = async () => {
       button.disabled = true;
       try {
-        const result = await fetch("/auth/logout", { method: "POST", headers: { "X-CIRQA-Request": "1" } });
+        const result = await fetch("/auth/logout", {
+          method: "POST",
+          headers: { "X-CIRQA-Request": "1" },
+        });
         if (result.ok || result.status === 401) {
           location.replace("/login");
           return;

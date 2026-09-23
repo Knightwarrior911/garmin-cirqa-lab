@@ -1,6 +1,6 @@
-# CIRQA Dashboard
+# CIRQA Watch
 
-A private Garmin Connect dashboard with a local Windows server and an owner-authenticated Vercel cloud entrypoint. Native Garmin measurements, optional session-effort feedback and a separate explainable, conservative planner—no homemade recovery or WHOOP-equivalent strain score.
+The Garmin screen CIRQA is missing: a configurable watch face, ordered glances and full native metric screens, with a local Windows server and owner-authenticated Vercel app. Synced Garmin measurements, optional effort feedback and a conservative planner—not Garmin firmware, live wrist streaming or a homemade recovery/strain score.
 
 ## Open locally
 
@@ -18,18 +18,22 @@ This is not direct live Bluetooth heart-rate streaming. Open Garmin Connect on y
 
 If Garmin authentication expires, run `login.py` again in a terminal. Do not share passwords, MFA codes, or token files.
 
-## Dashboard
+## Watch, glances and reports
 
-- Garmin training readiness and its native level, recovery time in hours.
-- Body Battery latest recorded level and daily high/low.
-- Sleep duration, sleep score and labeled Deep/REM/Light/Awake stages. Awake time is not counted as sleep.
-- Overnight HRV, Garmin weekly average and balanced band when available.
-- Resting heart rate, average stress, steps and Garmin step goal.
-- Respiration, Pulse Ox, active/total calories and weighted intensity minutes when returned.
-- Native acute load, load ratio, training status and VO₂ max when returned for the measurement date.
-- Calendar-spaced 7/28/90-day charts with data labels, missing-data gaps and accessible value tables.
-- Color-coded metric cards with real seven-day mini charts, visible coverage counts and missing-day gaps; dated step-goal progress when Garmin supplies a positive goal.
-- Six compact recent activity rows link to detail pages. **Activities** provides All / Running / Strength filters, search and recorded average run pace; sub-minute recordings remain accessible.
+- **Watch / Train / History** share a dark, instrument-style interface.
+- **Customize** chooses four watch-face metrics and pins/reorders glances. The clock is phone time; each measurement retains its recording date. Only layout IDs are saved in browser storage.
+- Open a glance for its dedicated **Overview / History** screen. Use the buttons or swipe horizontally; browser Back returns through visited screens.
+- Native readiness dial and all supplied factor ratings, recovery time, training status, acute load, load ratio, VO₂ max and four-week load focus.
+- Body Battery current/high/low, charged/drained points and a dated native intraday curve.
+- Sleep duration/score, labeled Deep/Light/REM/Awake intervals, sleep recharge and restless moments. Awake time is not sleep.
+- HRV overnight/weekly values and Garmin's balanced baseline band.
+- Resting heart rate and daily stress summaries, plus recorded intraday heart-rate/stress charts—not live readings.
+- Steps/goal, respiration, Pulse Ox, active/total calories, intensity minutes, skin-temperature deviation and naps when returned.
+- Calendar-spaced 7/28/90-day history, missing-data gaps and accessible value tables. Dense daily detail loads on demand for the selected date.
+- Last-run pace and recorded running weeks. **History** preserves All / Running / Strength filters, search and every saved activity.
+- **Morning report / Evening report** summarize dated readings and today/tomorrow training context. These are CIRQA summaries, not native Garmin watch reports.
+
+Readiness factor percentages are native factor ratings, not weights. Advanced running metrics remain unavailable unless Garmin supplies usable records; the capability audit did not return dated running tolerance, race predictions, endurance/hill scores or a usable lactate threshold. Running economy was not exposed by the audited client. No empty advanced endpoints were added to routine sync.
 
 Unavailable readings stay unavailable—not zero. Unsupported metric panels do not fill the page. Existing activities, splits and manual training-log history remain in SQLite; the noisy coaching engine and manual log dashboard were removed. The JSON CLI can still read old logs.
 
@@ -51,20 +55,21 @@ Garmin may downsample its chart response. Section summaries use returned samples
 
 ## Training, feedback and planning
 
-Open **Training load, insights & workout planner** from the overview, or https://garmin-cirqa-lab.vercel.app/training.
+Open **Train** from the bottom navigation, or https://garmin-cirqa-lab.vercel.app/training.
 
 - Native activity load and aerobic/anaerobic Training Effect stay separate from Garmin acute load. Missing load stays unknown; partial totals disclose coverage.
 - Compare the last seven or 28 completed days with the preceding equal period. Today is excluded. Metric means include coverage; changes require at least 75% recorded days in both periods. Descriptive insights do not infer causes or statistical significance.
 - Optionally record session effort (0–10), soreness and notes. Session-RPE = activity duration in minutes × your effort; these units are not Garmin load. Clear fields and save to remove your values. Feedback survives later Garmin activity refreshes.
-- In **Training**, use **Today**, **Your week** and **Load & trends**. **Edit plan** opens preferences; check-in and session feedback are focused dialogs rather than long forms in the feed. Today / Training / Activities navigation stays available across pages.
+- In **Train**, use **Today**, **Your week** and **Load & trends**. **Run / Strength / HYROX** open the relevant decision or combined week, not a band recording. **Edit plan**, daily check-in and session feedback remain focused dialogs.
 - HYROX preparation combines separately chosen running and strength days, available minutes, experience and optional race date. The form prefills HYROX/running/gym from the owner's stated intent but does not save automatically. Choose actual availability and complete today's symptoms check-in; no symptoms are assumed.
 - Suggested running uses easy/run-walk effort initially. Policy 2 can offer a 30-minute controlled-repeat session when an established running baseline, separation from demanding work and fresh recovery support it. Warm-up, main work, recovery and cool-down are explicit. Normal run averages are not treated as threshold or race pace. Race week stays easy; this is not a validated individual taper or automatically progressive race plan.
 - On gym days, guidance indicates maintain/reduce/defer demand rather than inventing a strain quota or weights. Use your established routine, with conservative effort cues. The separate strength-only goal still requires your entered routine.
 - Pain/illness, substantial symptoms, rest days and an already-recorded session can prevent a prescription. Native readiness must be measured today within 12 hours. See **Why this session?** and **Limits & missing information** for the disclosed rules.
 - Last-run average pace is calculated only from positive recorded distance and duration. If treadmill distance is missing, pace remains unavailable; recording/calibrating distance in Garmin is necessary. This is post-recording analysis, not live pace streaming.
 - Garmin calendar/plan availability is checked once daily for the current and next month. Accessible scheduled workouts are not verified watch Daily Suggested Workouts; empty results do not imply the watch has no suggestion. Failed checks retain the last schedule and show the error.
+- **Open workout guide** appears for eligible timed sessions. Foreground countdown, start/pause/resume, next, reset and finish; controlled repeats have separate work/recovery steps. Steps stop at zero and await manual advancement. Closing pauses. The guide does not record an activity, control CIRQA, stream HR/pace or provide background audio/notifications. Pain/illness and other blocking decisions remove the guide.
 
-**Refresh** in Training reads the stored snapshot; it does not request a Garmin sync. Use **Sync now** on Today after syncing your watch to Garmin Connect. Training forms preserve unsaved edits across reads and dialog closes. Cloud saves persist in the private snapshot with conditional ETag writes; an active sync or concurrent update asks you to retry rather than overwrite newer data.
+**Refresh** in Train reads the stored snapshot; it does not request a Garmin sync. Use **Sync now** on Watch after syncing CIRQA to Garmin Connect. Training forms preserve unsaved edits across reads and dialog closes. Cloud saves persist in the private snapshot with conditional ETag writes; an active sync or concurrent update asks you to retry rather than overwrite newer data.
 
 ## First installation
 
@@ -85,7 +90,7 @@ For an initial refresh of historical metric mappings:
 .venv\Scripts\python sync.py --days 30 --force
 ```
 
-Routine sync refreshes today/yesterday and skips older cached dates. Endpoint failures preserve values from those endpoints and are recorded in `sync_log`; a partial sync is not marked successful. Concurrent CLI/scheduled/dashboard sync processes are serialized by a local file lock. No aggressive automatic retries.
+Routine sync refreshes today/yesterday and skips older cached dates. Rich timelines begin with dates fetched by the updated collector; older daily summaries remain intact. Endpoint failures preserve previous values/groups and are recorded in `sync_log`; successful empty responses clear only their group. A partial sync is not marked successful. Concurrent CLI/scheduled/dashboard sync processes are serialized by a local file lock. No aggressive automatic retries.
 
 ## Vercel and iPhone
 
@@ -133,7 +138,7 @@ All health APIs require the signed owner cookie. Mutating requests require an ex
 .venv\Scripts\python -m unittest test_training test_cloud test_metrics test_activity_detail -v
 ```
 
-API: `/api/health`, `/api/dashboard` (combined homepage response), `/api/overview`, `/api/days`, `/api/activities`, `/api/sync`, `/api/activity/<id>`. Activity GETs read saved detail only. POST `/api/activity/<id>/fetch` requests native detail; POST `/api/sync` refreshes daily data. Both POST routes require `X-CIRQA-Request: 1`; cloud mode additionally requires owner authentication and an exact allowed origin. `/api/insights` and the log-write API were removed from the local server.
+API: `/api/health`, `/api/dashboard` (compact combined watch response), `/api/overview`, `/api/days`, `/api/day?date=YYYY-MM-DD` (full saved daily timelines), `/api/activities`, `/api/sync`, `/api/activity/<id>`. Day/activity GETs read saved detail only. Dashboard/day-list responses include timeline point counts rather than dense arrays. POST `/api/activity/<id>/fetch` requests native detail; POST `/api/sync` refreshes daily data. Both POST routes require `X-CIRQA-Request: 1`; cloud mode additionally requires owner authentication and an exact allowed origin. `/api/insights` and the log-write API were removed from the local server.
 
 GET `/api/training?period=7|28` returns saved native load, comparisons, feedback and the current planner decision. POST JSON to `/api/training/profile`, `/api/training/feedback` or `/api/training/checkin` saves owner inputs. All three use the same authentication/origin/request-header protections; validation failures leave earlier inputs intact. They never alter native Garmin scores.
 

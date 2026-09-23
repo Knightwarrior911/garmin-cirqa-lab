@@ -7,7 +7,7 @@ import argparse
 import json
 import math
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import store
 
@@ -40,9 +40,65 @@ def choose_record(payload, d, primary_key=None):
     )
 
 
+def native_time(value):
+    """Garmin GMT timestamps normalized to an explicit UTC instant."""
+    try:
+        if isinstance(value, str):
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return (parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)).astimezone(timezone.utc).isoformat()
+        if number(value) is not None:
+            return datetime.fromtimestamp(value / 1000, timezone.utc).isoformat()
+    except (ValueError, OverflowError, OSError):
+        pass
+    return None
+
+
+def native_points(rows, descriptors, value_key, maximum=None, *, key="key", index="index", minimum=0):
+    positions = {v.get(key): v.get(index) for v in descriptors or [] if isinstance(v, dict)}
+    value_idx, time_idx = positions.get(value_key, 1), positions.get("timestamp", 0)
+    if type(value_idx) is not int or value_idx < 0:
+        value_idx = 1
+    if type(time_idx) is not int or time_idx < 0:
+        time_idx = 0
+    points = []
+    for row in rows or []:
+        if not isinstance(row, list) or len(row) <= max(value_idx, time_idx):
+            continue
+        timestamp = native_time(row[time_idx])
+        value = number(row[value_idx], maximum)
+        if value is not None and value < minimum:
+            value = None
+        if timestamp:
+            points.append({"time": timestamp, "value": value})
+    return sorted(points, key=lambda p: p["time"])
+
+
+def sleep_watch(payload):
+    dto = payload.get("dailySleepDTO") or {}
+    names = {0: "Deep", 1: "Light", 2: "REM", 3: "Awake"}
+    points = []
+    for row in payload.get("sleepLevels") or []:
+        start, end = native_time(row.get("startGMT")), native_time(row.get("endGMT"))
+        if start and end and end > start and row.get("activityLevel") in names:
+            points.append({"start": start, "end": end, "stage": names[row["activityLevel"]]})
+    metrics = []
+    temperature = payload.get("avgSkinTempDeviationC")
+    if isinstance(temperature, (int, float)) and not isinstance(temperature, bool) and math.isfinite(temperature):
+        metrics.append({"key": "skin_temperature", "label": "Skin temperature deviation", "value": temperature, "unit": "°C", "status": "Garmin overnight deviation"})
+    for key, label, raw, unit in [
+        ("nap_seconds", "Nap time", dto.get("napTimeSeconds"), "s"),
+        ("sleep_battery_gain", "Sleep Body Battery gain", payload.get("bodyBatteryChange"), "points"),
+        ("restless_moments", "Restless moments", payload.get("restlessMomentsCount"), "events"),
+    ]:
+        if number(raw) is not None:
+            metrics.append({"key": key, "label": label, "value": raw, "unit": unit, "status": None})
+    return {"sleep": {"points": points}, "sleep_metrics": metrics}
+
+
 def fetch_day(garmin, d):
     values = {"date": d}
     errors = []
+    watch = {}
 
     def call(name):
         try:
@@ -104,33 +160,31 @@ def fetch_day(garmin, d):
         values["sleep_score"] = number(
             ((dto.get("sleepScores") or {}).get("overall") or {}).get("value"), 100
         )
+        watch.update(sleep_watch(sleep))
     battery = call("get_body_battery")
     if isinstance(battery, list):
         entry = next(
             (b for b in battery if isinstance(b, dict) and b.get("date") == d), {}
         )
-        descriptors = {
-            v.get("bodyBatteryValueDescriptorKey"): v.get(
-                "bodyBatteryValueDescriptorIndex"
-            )
-            for v in (entry.get("bodyBatteryValueDescriptorDTOList") or [])
-            if isinstance(v, dict)
-        }
-        idx = descriptors.get("bodyBatteryLevel", 1)
-        readings = [
-            r
-            for r in (entry.get("bodyBatteryValuesArray") or [])
-            if isinstance(r, list) and len(r) > idx and number(r[idx], 100) is not None
-        ]
-        if readings:
-            readings.sort(key=lambda r: r[0])
-            levels = [r[idx] for r in readings]
+        points = native_points(entry.get("bodyBatteryValuesArray"), entry.get("bodyBatteryValueDescriptorDTOList"),
+                               "bodyBatteryLevel", 100, key="bodyBatteryValueDescriptorKey", index="bodyBatteryValueDescriptorIndex")
+        watch["body_battery"] = {"points": points, "charged": number(entry.get("charged")), "drained": number(entry.get("drained"))}
+        levels = [p["value"] for p in watch["body_battery"]["points"] if p["value"] is not None]
+        if levels:
             values["body_battery_current"] = levels[-1]
             values["body_battery_high"] = max(levels)
             values["body_battery_low"] = min(levels)
             values["body_battery_updated_at"] = entry.get("endTimestampLocal")
         else:
             values["body_battery_current"] = None
+    stress = call("get_stress_data")
+    if isinstance(stress, dict):
+        watch["stress"] = {"points": native_points(stress.get("stressValuesArray"), stress.get("stressValueDescriptorsDTOList"), "stressLevel", 100)}
+        watch["body_battery_timeline"] = {"points": native_points(stress.get("bodyBatteryValuesArray"), stress.get("bodyBatteryValueDescriptorsDTOList"),
+                                                                 "bodyBatteryLevel", 100, key="bodyBatteryValueDescriptorKey", index="bodyBatteryValueDescriptorIndex")}
+    heart = call("get_heart_rates")
+    if isinstance(heart, dict):
+        watch["heart_rate"] = {"points": native_points(heart.get("heartRateValues"), heart.get("heartRateValueDescriptors"), "heartrate", minimum=1)}
     spo2 = call("get_spo2_data")
     if isinstance(spo2, dict):
         values["spo2_avg"] = number(spo2.get("averageSpO2"), 100)
@@ -148,6 +202,16 @@ def fetch_day(garmin, d):
             round(recovery / 60, 2) if recovery is not None else None
         )
         values["acute_load"] = number(r.get("acuteLoad"))
+        watch["readiness_factors"] = [
+            {"key": key, "label": label, "value": number(r.get(key + "Percent"), 100),
+             "unit": "/100", "status": r.get(key + "Feedback")}
+            for key, label in [
+                ("sleepScoreFactor", "Last night's sleep"), ("recoveryTimeFactor", "Recovery time"),
+                ("hrvFactor", "HRV status"), ("acwrFactor", "Acute load"),
+                ("sleepHistoryFactor", "Sleep history"), ("stressHistoryFactor", "Stress history")
+            ] if r.get(key + "Percent") is not None or r.get(key + "Feedback")
+        ]
+        watch["readiness_message"] = r.get("feedbackShort")
     status = call("get_training_status")
     if isinstance(status, dict):
         records = (
@@ -173,7 +237,19 @@ def fetch_day(garmin, d):
             if vo2.get("calendarDate") == d
             else None
         )
+        balance = choose_record(list(((status.get("mostRecentTrainingLoadBalance") or {}).get("metricsTrainingLoadBalanceDTOMap") or {}).values()), d, "primaryTrainingDevice")
+        watch["load_focus"] = [
+            {"key": key, "label": label, "value": number(balance.get("monthlyLoad" + suffix)),
+             "min": number(balance.get("monthlyLoad" + suffix + "TargetMin")),
+             "max": number(balance.get("monthlyLoad" + suffix + "TargetMax"))}
+            for key, label, suffix in [
+                ("low_aerobic", "Low aerobic", "AerobicLow"),
+                ("high_aerobic", "High aerobic", "AerobicHigh"),
+                ("anaerobic", "Anaerobic", "Anaerobic")
+            ] if number(balance.get("monthlyLoad" + suffix)) is not None
+        ]
     values["extracted_json"] = json.dumps(values)
+    values["watch"] = watch
     return values, errors
 
 

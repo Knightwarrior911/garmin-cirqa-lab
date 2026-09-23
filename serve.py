@@ -30,6 +30,8 @@ STATIC_FILES = {
     "/training": ("training.html", "text/html"),
     "/training.js": ("training.js", "text/javascript"),
     "/training.css": ("training.css", "text/css"),
+    "/watch.js": ("watch.js", "text/javascript"),
+    "/watch.css": ("watch.css", "text/css"),
     "/pwa.js": ("pwa.js", "text/javascript"),
     "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
     "/icon-192.png": ("icon-192.png", "image/png"),
@@ -151,6 +153,9 @@ class Handler(BaseHTTPRequestHandler):
                 ov = store.overview(conn)
                 ov["today"] = date.today().isoformat()
                 self.send_json({"ok": True, "overview": ov})
+            elif parsed.path == "/api/day":
+                day = store.day_to_dict(store.get_day(conn, qs.get("date", [""])[0]), detail=True)
+                self.send_json({"ok": True, "day": day} if day else {"ok": False, "error": "Day not found"}, 200 if day else 404)
             elif parsed.path == "/api/days":
                 try:
                     n = min(365, max(1, int(qs.get("days", ["90"])[0])))

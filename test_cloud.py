@@ -36,7 +36,7 @@ class CloudAccessTests(unittest.TestCase):
 
     def test_health_routes_require_owner_before_reading_storage(self):
         with patch.object(cloud_state, "load_state", side_effect=AssertionError("Must not access storage")):
-            for path in ("/api/dashboard", "/api/days", "/api/activities", "/api/activity/123", "/api/training"):
+            for path in ("/api/dashboard", "/api/days", "/api/day?date=2026-09-22", "/api/activities", "/api/activity/123", "/api/training"):
                 response = self.client.get(path, base_url=self.root)
                 self.assertEqual(response.status_code, 401)
                 self.assertEqual(response.headers["Cache-Control"], "private, no-store")

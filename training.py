@@ -287,7 +287,11 @@ def hyrox_session(profile, today, activities, modifiers, sleep, result):
                       target="4 × 2 minutes comfortably hard, with 2 minutes easy after each. Controlled, never a sprint.")
         result["steps"] = [
             {"title": "Warm up", "minutes": 8, "detail": "Easy jogging, RPE 2–3/10; build gradually."},
-            {"title": "4 × (2 min controlled + 2 min easy)", "minutes": 16, "detail": "Controlled portions at RPE 6/10: short phrases, not gasping. Recover at an easy jog or walk. If you cannot recover comfortably, finish easy instead."},
+            {"title": "4 × (2 min controlled + 2 min easy)", "minutes": 16, "detail": "Controlled portions at RPE 6/10: short phrases, not gasping. Recover at an easy jog or walk. If you cannot recover comfortably, finish easy instead.",
+             "segments": [{"title": f"Repeat {i} · {title}", "minutes": 2, "detail": detail}
+                          for i in range(1, 5) for title, detail in [
+                              ("Controlled", "RPE 6/10; short phrases, never a sprint. Stop or finish easy if symptoms develop."),
+                              ("Easy recovery", "Easy jog or walk. Recover comfortably before the next repeat.")]]},
             {"title": "Cool down", "minutes": 6, "detail": "Easy jog or walk, RPE 2–3/10."},
         ]
         result["reasons"].append("One separated weekly quality slot; at least six 20-minute runs across 14 days, a 30-minute duration baseline, no adjacent planned run/gym work and no recent recorded demanding session under this policy.")

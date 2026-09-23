@@ -40,12 +40,12 @@ function dateLabel(value) {
     : "Date unavailable";
 }
 const colors = [
-  "#b95555",
-  "#527ca4",
-  "#34705d",
-  "#a97825",
-  "#857ba8",
-  "#728a58",
+  "#ff7387",
+  "#5edfff",
+  "#a3ff12",
+  "#ffbb60",
+  "#b09aff",
+  "#80ddad",
 ];
 let activities = [],
   current = null,
@@ -380,7 +380,7 @@ function charts() {
             ? duration(1000 / v)
             : "Stopped"
           : num(v, 1);
-      markup += `<line x1="${L}" x2="${W - R}" y1="${py}" y2="${py}" stroke="#e8ede7"/><text x="${L - 8}" y="${py + 4}" text-anchor="end">${esc(label)}</text>`;
+      markup += `<line x1="${L}" x2="${W - R}" y1="${py}" y2="${py}" stroke="#29313c"/><text x="${L - 8}" y="${py + 4}" text-anchor="end">${esc(label)}</text>`;
     }
     let d = "",
       connected = false,
@@ -410,7 +410,7 @@ function charts() {
     }
   });
   $("charts").innerHTML =
-    `<svg viewBox="0 0 ${W} ${dataStreams.length * H}" role="img" aria-label="Aligned activity charts by ${axis === "time_s" ? "elapsed time" : "recorded distance"}">${markup}<line id="crosshair" x1="0" x2="0" y1="22" y2="${dataStreams.length * H - 25}" stroke="#64716b" stroke-dasharray="3 3" visibility="hidden"/></svg>`;
+    `<svg viewBox="0 0 ${W} ${dataStreams.length * H}" role="img" aria-label="Aligned activity charts by ${axis === "time_s" ? "elapsed time" : "recorded distance"}">${markup}<line id="crosshair" x1="0" x2="0" y1="22" y2="${dataStreams.length * H - 25}" stroke="#a0adbf" stroke-dasharray="3 3" visibility="hidden"/></svg>`;
   const svg = $("charts").querySelector("svg");
   svg.onpointermove = (event) => {
     const rect = svg.getBoundingClientRect(),
@@ -513,7 +513,7 @@ function route() {
     100 + (p[1] - (miny + maxy) / 2) * scale,
   ]);
   $("route").innerHTML =
-    `<svg viewBox="0 0 460 200" role="img" aria-label="Recorded GPS route trace"><polyline points="${coords.map((p) => p.map((n) => n.toFixed(2)).join(",")).join(" ")}" fill="none" stroke="#34705d" stroke-width="2"/><circle cx="${coords[0][0]}" cy="${coords[0][1]}" r="4" fill="#34705d"/><circle cx="${coords.at(-1)[0]}" cy="${coords.at(-1)[1]}" r="4" fill="#b95555"/></svg><p class="note">Green: start · Red: finish · North up · Trace only, no map tiles.</p>`;
+    `<svg viewBox="0 0 460 200" role="img" aria-label="Recorded GPS route trace"><polyline points="${coords.map((p) => p.map((n) => n.toFixed(2)).join(",")).join(" ")}" fill="none" stroke="#a3ff12" stroke-width="2"/><circle cx="${coords[0][0]}" cy="${coords[0][1]}" r="4" fill="#a3ff12"/><circle cx="${coords.at(-1)[0]}" cy="${coords.at(-1)[1]}" r="4" fill="#ff7387"/></svg><p class="note">Green: start · Red: finish · North up · Trace only, no map tiles.</p>`;
 }
 function sets() {
   $("sets-section").hidden =

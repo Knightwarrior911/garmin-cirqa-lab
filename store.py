@@ -1,6 +1,7 @@
 """SQLite storage for Garmin CIRQA data: daily metrics, activities, run splits, training log."""
 
 import sqlite3
+import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -143,6 +144,7 @@ EXTRA_DAY_COLUMNS = {
     "total_calories": "REAL",
     "readiness_updated_at": "TEXT",
     "body_battery_updated_at": "TEXT",
+    "watch_json": "TEXT",
 }
 DAY_COLUMNS.extend(EXTRA_DAY_COLUMNS)
 
@@ -179,6 +181,12 @@ def now_iso():
 
 def upsert_day(conn, values, source="garmin"):
     """Update returned fields; failed endpoints omit keys and preserve stored values."""
+    if "watch" in values:
+        previous = conn.execute("SELECT watch_json FROM days WHERE date=?", (values["date"],)).fetchone()
+        watch = json.loads(previous["watch_json"]) if previous and previous["watch_json"] else {}
+        # Each successful endpoint replaces its group; failed endpoints omit it.
+        watch.update(values["watch"])
+        values = {**values, "watch_json": json.dumps(watch, separators=(",", ":"))}
     columns = [k for k in DAY_COLUMNS if k in values]
     fields = columns + ["source", "extracted_json", "fetched_at"]
     updates = ", ".join(f"{k}=excluded.{k}" for k in fields if k != "date")
@@ -203,10 +211,18 @@ def get_days(conn, n=90):
     return list(reversed(rows))
 
 
-def day_to_dict(row):
+def day_to_dict(row, *, detail=False):
     if row is None:
         return None
     d = {k: row[k] for k in row.keys()}
+    watch = json.loads(d.pop("watch_json", None) or "{}")
+    watch["metrics"] = watch.pop("sleep_metrics", [])
+    for group in watch.values():
+        if isinstance(group, dict) and "points" in group:
+            group["point_count"] = len(group["points"])
+            if not detail:
+                del group["points"]
+    d["watch"] = watch
     d["sleep_hours"] = (
         round(d["sleep_seconds"] / 3600.0, 2) if d.get("sleep_seconds") else None
     )

@@ -1,44 +1,45 @@
-# Dashboard design
+# Watch interface design
 
-Google Health's compact metric hierarchy and Garmin watch glanceability are the design references, not copied branding. Light blue-neutral background, white surfaces, navy instrument panels, lime readiness/session accents, mint Body Battery and lavender sleep. Strong numeric hierarchy, system fonts and inline SVG; no remote assets, gradients or marketing hero copy. A readiness ring displays only Garmin's actual bounded score, not invented progress.
+The Garmin Forerunner/fēnix interaction model is the reference: watch face → ordered glances → dedicated metric screens. This is an independent display for synced CIRQA/account data, not Garmin firmware or a live sensor connection. AMOLED-black surfaces, high-contrast numbers, restrained cyan/lime/purple accents, system fonts and inline SVG; no remote assets or copied Garmin branding.
 
-## Hierarchy
+## Hierarchy and navigation
 
-- Compact header with CIRQA, sync state and primary action. Today / Training / Activities navigation is persistent at the bottom on mobile and inline on desktop.
-- Native readiness instrument plus compact Body Battery and sleep tiles, with dated real mini trends. Sleep stages expand on demand.
-- A direct HYROX training link and compact recent activity rows. Health/movement, additional native measurements and large historical charts sit behind labeled disclosures.
-- Detailed charts remain two columns on desktop, one on mobile; range changes preserve open overview sections.
-- Activity history has All / Running / Strength filters and search. Running rows expose average pace when real recording data supports it.
+- Persistent **Watch / Train / History** navigation on mobile and desktop. Login and activity details use the same dark palette.
+- Watch shows phone time, four selectable complications and a direct training entry. Measurement dates remain separate from the clock.
+- Default glances: readiness, training status, last run, running week, recovery, HRV, Body Battery and sleep. Pin/unpin, reorder and configure the four face fields in a native dialog. Only metric IDs and layout preferences enter local storage, never health values.
+- Every glance opens its own Overview / History screen. Buttons, browser Back and horizontal swipes provide navigation. Historical values have 7/28/90-day controls and accessible tables.
+- Morning/evening reports summarize latest dated readings and the planner's today/tomorrow context. Label them CIRQA summaries, not Garmin-generated reports. Future schedule entries are intentions, not recovery clearance.
+- Desktop places the face beside glances and detail instruments beside supporting data; mobile stacks these without horizontal overflow. Avoid an endless feed of full-size charts.
 
-## Data visualization
+## Native visualization
 
-- Native scores use 0–100 domains. Body Battery uses floating daily low/high bars.
-- Sleep and steps use bars; HRV, resting HR and respiration use lines.
-- Every chart uses calendar-spaced dates and preserves missing-day gaps.
-- Detailed seven-day charts label every observation; longer views label spaced extrema and the latest value.
-- Units, recorded-day counts, latest date, hover titles and expandable value tables provide context.
-- Data colors identify series, not unsupported diagnoses. No custom recovery score or generic recommendations.
-- Hero and health cards include seven-calendar-day mini charts, with visible date spans and recorded-day counts. Missing days break lines; absent history has an explicit empty state. Mini charts complement rather than replace the detailed charts and value tables.
-- Step progress uses the Garmin goal from the same dated record. Hide the progress bar for missing or zero goals; cap only its visual width, not the displayed percentage.
+- Readiness uses Garmin's actual 0–100 score and native zones: poor 1–24, low 25–49, moderate 50–74, high 75–94 and prime 95–100. Six native factor ratings retain their supplied labels; factor percentages are not contribution weights and do not inherit the score's thresholds.
+- HRV shows the recorded seven-day average, overnight value and supplied balanced baseline band. Do not invent a baseline or classify missing data.
+- Body Battery shows its recorded level, high/low, charge/drain and native intraday series. Prefer the dense wellness series over sparse daily report points. Retain daily latest/high/low history.
+- Sleep shows duration, score, native stage totals and actual stage intervals. Skin-temperature deviation, naps, sleep recharge and restless moments appear only when supplied. Preserve signed temperature deviations and valid zero values.
+- Resting heart rate and daily average stress remain dated summaries; their separate intraday charts show recorded values and the last sample time, never live pulse/stress.
+- Load focus uses native four-week categories and supplied target ranges. Missing advanced running metrics stay explicitly unavailable, rather than being inferred from ordinary activities.
+- Historical charts use calendar-spaced dates and missing-day gaps. Native daily timelines break at invalid samples and gaps over 30 minutes. GMT inputs become explicit UTC instants; chart labels use phone-local time. Charts include units, provenance, dates and recorded-value tables.
+- Large intraday arrays load on demand through the authenticated single-day API. The dashboard carries counts and compact summaries, not 90 days of dense sensor arrays. No health-data service worker or browser persistence.
 
 ## Freshness and interaction
 
-Date every metric. Add native recorded times for readiness and Body Battery. Historical latest values are never labeled today. Distinguish last successful cloud fetch from the sensor reading time. Readiness/recovery values are recorded snapshots, not live countdowns.
+Date every metric. Distinguish the last successful collector fetch from each reading's date/time. Recovery is a recorded value, not a live countdown. Show unavailable/error states without fabricating zero. Failed native endpoints retain previous groups; successful empty responses clear the relevant group.
 
-Refresh controls are keyboard accessible. Keep a selected chart range across refreshes. Unchanged polling responses do not rebuild the page or collapse value tables. Empty, unavailable and error states are explicit. Escape external strings before inserting HTML. Test narrow-screen overflow and 7/28/90-day controls.
+Unchanged polling responses do not rebuild the screen. Preserve chart range, open value tables and focused date selection through relevant updates. Escape external strings before HTML insertion. Native dialogs provide focus containment and Escape dismissal. Verify narrow-screen overflow, date selection, range controls, customization persistence and browser Back on the real UI.
 
-## Activity detail surface
+## Training
 
-Up to four primary native statistics, with running pace first when available, expandable additional values, then aligned recording charts. Reuse the homepage palette and spacing. Pace occupies a navy/lime tile. Local-summary fallback can compute recorded average pace from actual distance and timer duration but never creates a chart. All chart panels share a time/distance axis, selection window and hover cursor. SVG dimensions follow the container.
+Train separates Today / Your week / Load & trends. Run / Strength / HYROX launchers lead to the existing decision or saved week; they never start a band recording. Preferences, symptoms and session feedback remain focused dialogs, preserving unsaved input across reads and closes. Nothing is saved until the owner submits it.
 
-Pace is positioned on an equal-speed scale to preserve near-stationary samples without flattening the moving portions; exact pace values remain available on hover. Nonnegative metrics never have negative axis labels. Do not connect missing readings or gaps longer than 30 seconds.
+The optional phone workout guide snapshots an eligible timed recommendation. Large foreground countdown, pause/resume, next, reset and finish. Controlled repeats expose individual work/recovery segments. Steps stop at zero; the user advances manually. Closing pauses; leaving while running warns. No background audio/notifications, live HR/pace, CIRQA recording control or fabricated completed activity. A new blocked recommendation removes the guide. Symptoms remain a reason to stop, never something a timer can clear.
 
-Native zones, laps, typed intervals, strength sets and an optional local GPS trace follow the charts. Comparison uses explicit units; pace and speed are separate rows across different sports. Missing streams and partial download failures remain visible. No inferred interval classification, performance ranking or coaching.
+Native Garmin load, acute load and optional session-RPE retain independent units. Unknown load is not a rest day. Training reasons, coverage, policy limits and calendar provenance stay accessible; scheduled workouts are not relabeled watch Daily Suggested Workouts.
 
-## Training workspace
+## Activity history and detail
 
-Keep load, comparisons and the planner on `/training`, linked from overview and activity detail. Native Garmin load, native acute load and optional session-RPE occupy separate cards with independent units. Unknown values use an em dash with accessible “Unavailable” text; valid zero remains numeric. Calendar load bars retain unknown gaps, mark partial totals, and provide a recorded-value table.
+History retains All / Running / Strength filters, search and average pace only when positive recorded distance and duration support it. Preserve all stored sessions, including short recordings.
 
-The training workspace separates Today / Your week / Load & trends. Today's session is a navy panel with demand, effort target and numbered warm-up/main/cool-down steps. Recorded running pace and 28-day running volume are adjacent summaries. Source, reasons and limitations remain available without repeating paragraphs in the feed. The week combines running and gym days; its future entries are intentions, not recovery clearance.
+Up to four primary native statistics, then expandable statistics and aligned recording charts. All panels share a time/distance axis, section selection and hover cursor. Pace uses an equal-speed scale with exact sample pace available. Nonnegative streams never have negative axes; missing samples and gaps over 30 seconds are disconnected.
 
-Preferences, daily check-in and session feedback use labeled native dialogs, with focus containment and inline errors. HYROX/running/gym may be prefilled from the owner's stated intent, but nothing is persisted until explicit save; availability, experience, symptoms and exercise loads are never invented. Preserve unsaved entries across reads and dialog closes. Show 12 recent session cards initially in the load view, with an expansion control. Native calendar status remains separate from CIRQA's planner and watch suggestions.
+Native zones, laps, typed intervals, strength sets and optional local GPS trace follow the charts. Comparisons use explicit units; pace and speed remain separate across sports. Partial download failures and missing streams remain visible. No invented interval classification, race pace or coaching.

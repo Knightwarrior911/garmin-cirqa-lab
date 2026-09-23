@@ -40,19 +40,21 @@ PUBLIC_FILES = {
     "activity.css": "text/css",
     "training.js": "text/javascript",
     "training.css": "text/css",
+    "watch.js": "text/javascript",
+    "watch.css": "text/css",
 }
 LOGIN = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#204e40"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080a0d"><meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Sign in · CIRQA</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f5f6f3;color:#202b28;font:16px/1.5 system-ui,sans-serif;min-height:100dvh;display:grid;place-items:center;padding:24px}
-main{max-width:420px;width:100%;background:white;border:1px solid #dfe5df;border-radius:20px;padding:32px}
-img{border-radius:14px}h1{margin:18px 0 8px}p{color:#64716b}label{display:block;font-weight:600;margin:22px 0 8px}
-input,button{font:inherit;width:100%;padding:13px;border-radius:9px;border:1px solid #b9c9bf}button{margin-top:18px;background:#204e40;color:white;cursor:pointer}
-input:focus-visible,button:focus-visible{outline:3px solid #527ca4;outline-offset:3px}.error{color:#9a3412}small{color:#64716b;display:block;margin-top:22px}
+*{box-sizing:border-box}body{margin:0;background:#080a0d;color:#f4f7fa;font:16px/1.5 system-ui,sans-serif;min-height:100dvh;display:grid;place-items:center;padding:24px;color-scheme:dark}
+main{max-width:420px;width:100%;background:#14181e;border:1px solid #303944;border-radius:20px;padding:32px}
+img{border-radius:14px}h1{margin:18px 0 8px}p{color:#98a4b5}label{display:block;font-weight:600;margin:22px 0 8px}
+input,button{font:inherit;width:100%;padding:13px;border-radius:9px;border:1px solid #475464}input{background:#080a0d;color:#f4f7fa}button{margin-top:18px;background:#a3ff12;color:#080a0d;font-weight:700;cursor:pointer}
+input:focus-visible,button:focus-visible{outline:3px solid #5edfff;outline-offset:3px}.error{color:#ff927d}small{color:#98a4b5;display:block;margin-top:22px}
 </style></head><body><main><img src="/icon-192.png" width="56" height="56" alt="CIRQA">
-<h1>Your private dashboard</h1><p>Sign in to view your Garmin readings and activity history.</p>
+<h1>Your CIRQA. With a screen.</h1><p>Sign in to your watch face, native Garmin metrics and training history.</p>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <form action="/login" method="post"><label for="password">Owner access code</label>
 <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128" autofocus>
@@ -211,6 +213,14 @@ def daily_data():
     state, _ = cloud_state.load_state()
     with cloud_state.open_snapshot(state) as (conn, _):
         return jsonify(ok=True, days=[store.day_to_dict(r) for r in store.get_days(conn, count_arg("days", 90, 365))])
+
+
+@app.get("/api/day")
+def daily_detail_data():
+    state, _ = cloud_state.load_state()
+    with cloud_state.open_snapshot(state) as (conn, _):
+        day = store.day_to_dict(store.get_day(conn, request.args.get("date", "")), detail=True)
+        return jsonify(ok=True, day=day) if day else (jsonify(ok=False, error="Day not found"), 404)
 
 
 @app.get("/api/activities")

@@ -2,11 +2,11 @@
 
 ## Purpose
 
-A quick, readable view of the owner's Garmin Connect measurements: training readiness, Body Battery, sleep, HRV, heart rate, stress and daily movement. Measurements remain native and dated. A separate training workspace adds factual comparisons, optional owner-reported session effort and conservative, explainable planning based on the owner's explicitly saved goal and constraints.
+The Garmin screen CIRQA is missing: a private, watch-first display with a configurable face, ordered glances and dedicated native metric screens. Measurements remain native and dated, not live wrist streams. Morning/evening reports organize those readings without pretending to be Garmin-generated reports. A separate training workspace preserves factual comparisons, optional owner-reported effort and conservative, explainable planning.
 
 ## Owner priorities
 
-The owner is preparing for HYROX. Running improvement and readable run pace are primary; weight training remains part of the week. Daily guidance should answer what to run and how demanding gym work should be, without presenting a fabricated strain quota. Use Garmin-watch-like glanceability and Google Health's compact, categorized information hierarchy. Avoid generic AI marketing copy, endless dashboard cards and forms mixed into the main feed. The experience must be intuitive and easy to follow.
+The owner bought screenless CIRQA and misses the Forerunner 970 / fēnix 9 Pro watch experience. Watch interaction and readable instrument-style screens take priority over a general analytics dashboard. HYROX, running improvement and strength remain the training focus. Guidance should answer what to run and how demanding gym work should be, without a fabricated strain quota. Avoid generic marketing copy, endless chart cards and forms mixed into the glance feed.
 
 ## Daily flow
 
@@ -14,10 +14,10 @@ Sync the band to Garmin Connect on iPhone. Open the private cloud dashboard from
 
 ## Information hierarchy
 
-1. Native Garmin training readiness, Body Battery and sleep.
-2. A direct route to the next run, gym demand and a combined training week.
-3. Compact activity history with running pace when recorded distance supports it.
-4. Health/movement, other native metrics and historical charts behind labeled disclosures.
+1. Phone-time watch face, four configurable metric fields and a direct training entry.
+2. Pinnable/reorderable glances leading to full metric Overview / History pages.
+3. Morning/evening summaries, with dates and explicit CIRQA provenance.
+4. Train for running, strength and HYROX; History for every preserved activity and recording detail.
 
 ## Rules
 
@@ -27,6 +27,14 @@ Sync the band to Garmin Connect on iPhone. Open the private cloud dashboard from
 - Show units and data labels, preserve chart gaps, provide accessible recorded-value tables.
 - Do not delete health history to simplify the display.
 - Cloud freshness is not direct live wrist streaming.
+
+## Watch detail and capability
+
+Retain native readiness factor ratings, HRV baseline, Body Battery samples, sleep-stage intervals, daily heart-rate/stress samples and dated load-focus categories. Native skin-temperature deviation, naps, sleep recharge and restless moments are optional, never synthesized. Signed deviations and valid zero survive normalization. Keep large intraday series in private storage and load one selected day on demand.
+
+The account capability audit returned no usable dated running-tolerance, race-prediction, endurance/hill-score or lactate-threshold record. Running economy was not exposed through the audited client. This is an availability finding, not a universal claim about CIRQA or compatible accessories. Do not fill these gaps with modeled Garmin scores. Calendar workouts remain distinct from native watch Daily Suggested Workouts.
+
+The optional phone workout guide provides foreground timed steps for eligible planner sessions, including separate controlled/easy repeat segments. Pause/resume, next, reset and finish do not record an activity or control CIRQA. Each step waits for manual advancement; no background cues or live sensor data are promised. A blocked recommendation offers no guide.
 
 ## Training workspace
 

@@ -36,6 +36,129 @@
     d.setUTCDate(d.getUTCDate() + offset);
     return d.toISOString().slice(0, 10);
   };
+  const guide = {
+    key: "",
+    steps: [],
+    index: 0,
+    remaining: 0,
+    deadline: 0,
+    running: false,
+    finished: false,
+  };
+  const guideTime = () =>
+    guide.running ? Math.max(0, guide.deadline - Date.now()) : guide.remaining;
+  function drawGuide() {
+    const step = guide.steps[guide.index];
+    if (!step) return;
+    const seconds = Math.ceil(guideTime() / 1000);
+    $("guide-clock").textContent =
+      `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+    $("guide-progress").textContent =
+      `STEP ${guide.index + 1} OF ${guide.steps.length}`;
+    $("guide-step").textContent = guide.finished
+      ? "Guide finished"
+      : step.title;
+    $("guide-detail").textContent = guide.finished
+      ? "No activity was recorded by this guide. Finish your recording on CIRQA and sync through Garmin Connect."
+      : step.detail;
+    const state = guide.finished
+      ? "Finished"
+      : guide.running
+        ? "Running"
+        : seconds === 0
+          ? "Step complete · Next when ready"
+          : "Paused · Start when ready";
+    if ($("guide-state").textContent !== state)
+      $("guide-state").textContent = state;
+    $("guide-toggle").textContent = guide.running
+      ? "Pause"
+      : seconds === 0
+        ? "Restart step"
+        : "Start / resume";
+    $("guide-toggle").disabled = guide.finished;
+    $("guide-next").disabled = guide.finished;
+    $("guide-next").textContent =
+      guide.index === guide.steps.length - 1 ? "Finish guide" : "Next step";
+  }
+  function pauseGuide() {
+    guide.remaining = guideTime();
+    guide.running = false;
+    drawGuide();
+  }
+  function resetGuide() {
+    guide.running = false;
+    guide.finished = false;
+    guide.index = 0;
+    guide.remaining = (guide.steps[0]?.minutes || 0) * 60000;
+    drawGuide();
+  }
+  function updateGuide() {
+    const r = data.recommendation;
+    const steps =
+      r.status === "suggestion"
+        ? r.steps.flatMap((s) => s.segments || [s])
+        : [];
+    const eligible =
+      steps.length > 0 &&
+      steps.every(
+        (s) =>
+          typeof s.minutes === "number" &&
+          Number.isFinite(s.minutes) &&
+          s.minutes > 0,
+      );
+    $("guide-open").hidden = !eligible;
+    const key = JSON.stringify([data.today, r.title, eligible ? steps : []]);
+    if (key !== guide.key) {
+      guide.key = key;
+      guide.steps = eligible ? steps : [];
+      resetGuide();
+      if ($("guide-dialog").open) $("guide-dialog").close();
+    }
+    $("guide-title").textContent = r.title;
+  }
+  $("guide-open").onclick = () => {
+    if (!guide.steps.length) return;
+    drawGuide();
+    $("guide-dialog").showModal();
+  };
+  $("guide-close").onclick = () => {
+    pauseGuide();
+    $("guide-dialog").close();
+  };
+  $("guide-dialog").addEventListener("cancel", pauseGuide);
+  $("guide-dialog").addEventListener("close", pauseGuide);
+  $("guide-toggle").onclick = () => {
+    if (guide.running) pauseGuide();
+    else {
+      if (guide.remaining <= 0)
+        guide.remaining = guide.steps[guide.index].minutes * 60000;
+      guide.deadline = Date.now() + guide.remaining;
+      guide.running = true;
+      drawGuide();
+    }
+  };
+  $("guide-next").onclick = () => {
+    guide.running = false;
+    if (guide.index === guide.steps.length - 1) {
+      guide.finished = true;
+      guide.remaining = 0;
+    } else {
+      guide.index++;
+      guide.remaining = guide.steps[guide.index].minutes * 60000;
+    }
+    drawGuide();
+  };
+  $("guide-reset").onclick = resetGuide;
+  function tickGuide() {
+    if (!guide.running) return;
+    if (guideTime() === 0) {
+      guide.remaining = 0;
+      guide.running = false;
+    }
+    drawGuide();
+  }
+  setInterval(tickGuide, 500);
+  document.addEventListener("visibilitychange", tickGuide);
 
   async function request(path, payload) {
     const options = { credentials: "same-origin", cache: "no-store" };
@@ -431,6 +554,7 @@
     $("training-content").hidden = false;
     renderLoad();
     renderRecommendation();
+    updateGuide();
     renderRunning();
     renderProfile();
     renderCheckin();
@@ -566,6 +690,32 @@
       next.focus();
     });
   });
+  document.querySelectorAll("[data-launch]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!data) return;
+      const kind = button.dataset.launch;
+      const currentStrength =
+        data.recommendation.kind === "strength" ||
+        data.profile?.sport === "strength";
+      const today =
+        kind === "run"
+          ? !currentStrength
+          : kind === "strength"
+            ? currentStrength
+            : false;
+      selectView($(today ? "today-tab" : "week-tab"));
+      $("message").textContent =
+        kind === "hyrox"
+          ? "Your combined running and strength week."
+          : today
+            ? "Today's decision still applies. This does not start a CIRQA recording."
+            : `Your ${kind === "run" ? "running" : "strength"} days are in your saved week.`;
+      $(today ? "today-panel" : "week-panel").scrollIntoView({
+        block: "start",
+        behavior: "auto",
+      });
+    });
+  });
   $("reload").addEventListener("click", refresh);
   document.querySelectorAll("[data-period]").forEach((button) =>
     button.addEventListener("click", () => {
@@ -576,7 +726,7 @@
     }),
   );
   window.addEventListener("beforeunload", (event) => {
-    if (Object.values(dirty).some(Boolean)) {
+    if (Object.values(dirty).some(Boolean) || guide.running) {
       event.preventDefault();
       event.returnValue = "";
     }

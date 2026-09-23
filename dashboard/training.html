@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <meta name="theme-color" content="#12213b" />
+    <meta name="theme-color" content="#080a0d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="CIRQA" />
     <title>Training · CIRQA</title>
@@ -19,7 +19,7 @@
   <body>
     <main>
       <header>
-        <a class="brand" href="/">CIRQA<span>TRAINING COMPANION</span></a>
+        <a class="brand" href="/">CIRQA<span>YOUR GARMIN DISPLAY</span></a>
         <div class="header-actions">
           <button
             id="reload"
@@ -37,25 +37,36 @@
         <a href="/"
           ><svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10" /></svg
-          >Today</a
+          >Watch</a
         ><a href="/training" aria-current="page"
           ><svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m5 17 4-6 4 2 3-6M3 17h3m8-10h3v3M11 4h2" /></svg
-          >Training</a
+          >Train</a
         ><a href="/activities"
           ><svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 4h14v17H5zM8 8h8M8 12h8M8 16h5" /></svg
-          >Activities</a
+          >History</a
         >
       </nav>
       <section class="page-heading">
         <div>
           <p class="eyebrow" id="training-date">YOUR NEXT SESSION</p>
-          <h1>Training</h1>
+          <h1>Train</h1>
           <p class="muted">HYROX preparation · Running &amp; strength</p>
         </div>
         <span class="goal-chip" id="goal-chip">HYROX focus</span>
       </section>
+      <div class="activity-launcher" aria-label="Training activity">
+        <button type="button" data-launch="run">
+          <strong>Run</strong><small>Session & pace</small>
+        </button>
+        <button type="button" data-launch="strength">
+          <strong>Strength</strong><small>Gym days</small>
+        </button>
+        <button type="button" data-launch="hyrox">
+          <strong>HYROX</strong><small>Your combined week</small>
+        </button>
+      </div>
       <p id="message" class="status" role="status" aria-live="polite">
         Loading your training…
       </p>
@@ -108,6 +119,9 @@
                 ><strong id="decision-demand"></strong>
               </div>
               <ol id="decision-steps" class="steps"></ol>
+              <button type="button" id="guide-open" hidden>
+                Open workout guide →
+              </button>
               <button type="button" id="decision-action" class="primary">
                 Set up your week
               </button>
@@ -336,6 +350,39 @@
         Garmin measurements. Your training decisions. Private by design.
       </footer>
     </main>
+    <dialog id="guide-dialog" aria-labelledby="guide-title">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">PHONE WORKOUT GUIDE</p>
+          <h2 id="guide-title">Your session</h2>
+        </div>
+        <button
+          type="button"
+          id="guide-close"
+          aria-label="Pause and close workout guide"
+        >
+          ×
+        </button>
+      </div>
+      <p class="muted small">
+        Does not record on CIRQA. Keep the screen open; background sounds and
+        notifications are not provided.
+      </p>
+      <p id="guide-progress" class="eyebrow"></p>
+      <h3 id="guide-step"></h3>
+      <output id="guide-clock" aria-live="off">00:00</output>
+      <p id="guide-detail"></p>
+      <p id="guide-state" class="muted small" role="status"></p>
+      <div class="guide-controls">
+        <button type="button" id="guide-toggle" class="primary">Start</button
+        ><button type="button" id="guide-next">Next step</button
+        ><button type="button" id="guide-reset">Reset</button>
+      </div>
+      <p class="muted small">
+        Each step stops at zero. Tap Next when ready. Stop for pain, illness or
+        loss of form; the timer is not clearance to continue.
+      </p>
+    </dialog>
     <dialog id="profile-dialog" aria-labelledby="profile-title">
       <div class="dialog-head">
         <div>
