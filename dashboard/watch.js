@@ -316,7 +316,7 @@ function summary(def) {
   }
   if (def.id === "running-week") {
     const w = weekRuns(),
-      known = w.items.filter((a) => valid(a.distance_m));
+      known = w.items.filter((a) => valid(a.distance_m) && a.distance_m > 0);
     return {
       value:
         w.items.length && !known.length
@@ -361,13 +361,31 @@ function icon(id) {
       "M12 3v3m-8 6h3m10 0h3M6 6l2 2m8 0 2-2M5 19a9 9 0 1 1 14 0M12 12l4-4",
     status: "M4 19V11m5 8V6m5 13V9m5 10V3",
     sleep: "M19 15A8 8 0 0 1 9 5 8 8 0 1 0 19 15Z",
-    "body-battery": "M8 3h8v3h3v15H5V6h3zm2 7h4m-2-2v4m-2 4h4",
+    "body-battery": "M9 2h6v3h4v16H5V5h4M13 8l-4 6h4l-2 5 6-8h-4z",
     hrv: "M2 12h4l3-7 4 14 3-9 2 2h4",
     "heart-rate": "M12 20S2 14 2 8c0-5 7-6 10-1 3-5 10-4 10 1 0 6-10 12-10 12Z",
-    steps: "M7 3v7m-2 0h4v5H5zm12-1v7m-2 0h4v5h-4z",
+    steps:
+      "M8 3c-2 0-3 3-3 6s1 4 3 4 3-1 3-4-1-6-3-6Zm-3 13h6v5H5ZM17 3h-3v5h3m1 3c-2 0-3 3-3 6s1 4 3 4 3-1 3-4-1-6-3-6Z",
     recovery: "M12 4a8 8 0 1 1-7 4M3 3v6h6m3-2v6l3 2",
-    "last-run": "m5 21 4-6-3-4 5-4 4 4h5M9 15l5 1 1 5m0-17h.01",
-    "running-week": "M4 20V10m5 10V6m5 14V12m5 8V3",
+    "last-run":
+      "M15 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM3 13l5-4 4 1 3 4h5M12 10l-3 6-5 5m5-5 5 1 2 4",
+    "running-week":
+      "M5 5h14v16H5ZM8 2v6m8-6v6M5 10h14M8 14h2m4 0h2m-8 4h2m4 0h2",
+    stress:
+      "M12 2c4 4 7 7 7 11a7 7 0 0 1-14 0c0-2 1-4 3-6l1 5 3-10ZM9 17l2-3 2 2 2-3",
+    vo2: "M11 3v7l-3-3C4 9 2 13 3 18c1 4 7 3 8 0V9m2-6v7l3-3c4 2 6 6 5 11-1 4-7 3-8 0V9",
+    respiration:
+      "M11 3v7l-3-3C4 9 2 13 3 18c1 4 7 3 8 0V9m2-6v7l3-3c4 2 6 6 5 11-1 4-7 3-8 0V9",
+    "pulse-ox":
+      "M12 2S5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13ZM9 17l6-6m-6 1h.01M15 17h.01",
+    calories:
+      "M13 2c1 6-5 7-3 11l3-3c6 4 7 10 1 12C3 23 2 13 6 8l1 5C10 10 8 6 13 2Z",
+    intensity: "M12 2 4 14h7l-1 8 10-13h-7z",
+    "skin-temperature":
+      "M10 14V5a2 2 0 0 1 4 0v9a5 5 0 1 1-4 0Zm2-6v9m5-11h3m-3 4h3",
+    naps: "M17 15A7 7 0 0 1 9 5a7 7 0 1 0 8 10ZM16 3h5l-5 5h5",
+    "acute-load": "M3 18h3v-5h4V9h4V5h4V2M3 22h18",
+    "load-ratio": "M12 3v18M3 7h18M6 7l-4 8h8L6 7Zm12 0-4 8h8l-4-8Z",
   };
   return `<span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${p[id] || p.hrv}"/></svg></span>`;
 }
@@ -387,21 +405,10 @@ function readinessColor(v) {
 function metricColor(def, s) {
   return def.id === "readiness" ? readinessColor(s.number) : def.color;
 }
-function clock() {
-  const el = $("clock");
-  if (!el) return;
-  const t = new Date();
-  el.innerHTML = `<span>${String(t.getHours()).padStart(2, "0")}</span>${String(t.getMinutes()).padStart(2, "0")}`;
-  $("clock-date").textContent = t.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 function complication(id) {
   const def = definition(id),
     s = summary(def);
-  return `<a class="complication" href="#metric/${id}/overview" style="--accent:${metricColor(def, s)}"><span class="label">${esc(def.title)}</span><strong class="comp-value ${s.text ? "text-value" : ""}">${esc(s.value)}<small>${esc(s.unit)}</small></strong><span class="stamp">${esc(s.date ? dateLabel(s.date) : "Not recorded")}</span></a>`;
+  return `<a class="complication" href="#metric/${id}/overview" style="--accent:${metricColor(def, s)}"><span class="comp-heading">${icon(id)}<span class="label">${esc(def.title)}</span></span><strong class="comp-value ${s.text ? "text-value" : ""}">${esc(s.value)}<small>${esc(s.unit)}</small></strong>${def.unit === "/100" && valid(s.number) ? `<div class="comp-meter"><i style="width:${Math.min(100, s.number)}%"></i></div>` : ""}<span class="stamp">${esc(s.date ? dateLabel(s.date) : "Not recorded")}</span></a>`;
 }
 function glance(id) {
   const def = definition(id),
@@ -410,7 +417,16 @@ function glance(id) {
 }
 function home() {
   const next = trainingData?.recommendation;
-  return `<div class="watch-home"><section><div class="watch-face"><div class="clock-row"><div id="clock-date" class="clock-date"></div><span class="device-time">PHONE TIME</span></div><div class="clock" id="clock" aria-label="Current phone time"></div><div class="complications">${prefs.face.map(complication).join("")}</div><a class="next-session" href="/training">${icon("last-run")}<div><strong>${esc(next?.title || "Open your training week")}</strong><small>CIRQA guidance · Run / Strength / HYROX</small></div><span class="arrow">↗</span></a></div><div class="report-links"><a href="#report/morning">Morning report<span>SLEEP · RECOVERY · TODAY</span></a><a href="#report/evening">Evening report<span>YOUR DAY · TOMORROW</span></a></div><p class="muted">Your watch display, powered by synced Garmin readings. Health values retain their recording dates.</p></section><section aria-label="Garmin glances"><div class="section-head"><h2>Glances</h2><button type="button" data-customize>EDIT</button></div>${
+  const race = trainingData?.running?.race;
+  const raceDate = race?.date || "2026-10-25";
+  const daysLeft = overview.today
+    ? Math.round(
+        (Date.parse(raceDate + "T12:00:00Z") -
+          Date.parse(overview.today + "T12:00:00Z")) /
+          86400000,
+      )
+    : null;
+  return `<div class="watch-home"><section><div class="watch-face"><div class="today-face-head"><div><p class="eyebrow">${dateLabel(overview.today)}</p><h1 tabindex="-1">Today</h1></div><span class="today-emblem">${icon("last-run")}</span></div><a class="race-ribbon" href="/training"><span>HYROX · ${dateLabel(raceDate)}</span><strong>${daysLeft === null ? "Your running plan" : daysLeft > 0 ? daysLeft + " days to go" : daysLeft === 0 ? "Race day" : "Update race date"} <span aria-hidden="true">›</span></strong></a><div class="complications">${prefs.face.map(complication).join("")}</div><a class="next-session" href="/training">${icon("last-run")}<div><strong>${esc(next?.title || "Open today's run")}</strong><small>Running only · Strength stays in Ladder</small></div><span class="arrow">↗</span></a></div><div class="report-links"><a href="#report/morning">Morning report<span>SLEEP · RECOVERY · TODAY</span></a><a href="#report/evening">Evening report<span>YOUR DAY · TOMORROW</span></a></div><p class="muted">Your native Garmin readings, with their recording dates. Open Train for today's run.</p></section><section aria-label="Garmin glances"><div class="section-head"><h2>Glances</h2><button type="button" data-customize>EDIT</button></div>${
     prefs.order
       .filter((id) => prefs.pins.includes(id))
       .map(glance)
@@ -660,7 +676,7 @@ function activityRows(items) {
     ? items
         .map(
           (a) =>
-            `<a class="activity-row" href="/activity?id=${encodeURIComponent(a.activity_id)}"><div>${esc(a.name || words(a.type) || "Activity")}<span>${dateLabel(a.start_local || a.start_iso)} · ${num(valid(a.duration_s) ? a.duration_s / 60 : null)} min · ${valid(a.distance_m) ? num(a.distance_m / 1000, 2) + " km" : "Distance unavailable"}</span></div><b>${RUN_TYPES.has(a.type) ? paceText(pace(a)) + " /km" : num(a.avg_hr) + " bpm"}</b></a>`,
+            `<a class="activity-row" href="/activity?id=${encodeURIComponent(a.activity_id)}"><div>${esc(a.name || words(a.type) || "Activity")}<span>${dateLabel(a.start_local || a.start_iso)} · ${num(valid(a.duration_s) ? a.duration_s / 60 : null)} min · ${valid(a.distance_m) && (!RUN_TYPES.has(a.type) || a.distance_m > 0) ? num(a.distance_m / 1000, 2) + " km" : "Distance unavailable"}</span></div><b>${RUN_TYPES.has(a.type) ? paceText(pace(a)) + " /km" : num(a.avg_hr) + " bpm"}</b></a>`,
         )
         .join("")
     : '<p class="empty">No recorded activities in this view.</p>';
@@ -685,7 +701,9 @@ function runDetail(def, history) {
             ]
               .sort(([a], [b]) => b.localeCompare(a))
               .map(([day, items]) => {
-                const known = items.filter((a) => valid(a.distance_m));
+                const known = items.filter(
+                  (a) => valid(a.distance_m) && a.distance_m > 0,
+                );
                 return `<tr><td>${dateLabel(day)}</td><td>${items.length}</td><td>${known.length ? num(known.reduce((sum, a) => sum + a.distance_m, 0) / 1000, 1) : "—"}</td><td>${known.length}/${items.length} runs</td></tr>`;
               })
               .join("")}</tbody></table></div>`
@@ -693,12 +711,12 @@ function runDetail(def, history) {
       }`;
     }
     const w = weekRuns(),
-      distance = w.items.filter((a) => valid(a.distance_m)),
+      distance = w.items.filter((a) => valid(a.distance_m) && a.distance_m > 0),
       total = distance.reduce((s, a) => s + a.distance_m, 0);
-    return `<div class="instrument"><p class="eyebrow">${dateLabel(w.start)}–${dateLabel(w.end)} · MONDAY START</p><div class="metric-big">${w.items.length && !distance.length ? "—" : num(total / 1000, 1)} <small>km</small></div><p class="classification">${w.items.length} recorded runs</p><p class="detail-copy">Recorded distance, not running tolerance or a weekly mileage prescription. ${distance.length}/${w.items.length} runs have a distance value.</p></div>${activityRows(w.items)}<a class="next-session" href="/training">Open your running & strength week →</a>`;
+    return `<div class="instrument"><p class="eyebrow">${dateLabel(w.start)}–${dateLabel(w.end)} · MONDAY START</p><div class="metric-big">${w.items.length && !distance.length ? "—" : num(total / 1000, 1)} <small>km</small></div><p class="classification">${w.items.length} recorded runs</p><p class="detail-copy">Recorded distance, not running tolerance or a weekly mileage prescription. ${distance.length}/${w.items.length} runs have a usable distance value.</p></div>${activityRows(w.items)}<a class="next-session" href="/training">Open your running week →</a>`;
   }
   const a = runs()[0];
-  return `<div class="instrument"><p class="eyebrow">RECORDED AVERAGE PACE</p><div class="metric-big">${paceText(pace(a))} <small>/km</small></div><p class="classification">${esc(a?.name || "No recorded run")}</p><p class="stamp">${a ? dateLabel(a.start_local || a.start_iso) : "Record a run in Garmin Connect"}</p></div>${a ? `<div class="stats">${stat("Distance", valid(a.distance_m) ? num(a.distance_m / 1000, 2) : "—", "km")}${stat("Duration", num(valid(a.duration_s) ? a.duration_s / 60 : null, 1), "min")}${stat("Average heart rate", num(a.avg_hr), "bpm")}${stat("Native load", num(a.training_load))}</div><p class="detail-copy">Average pace requires positive recorded distance and duration. Treadmill names are not used to guess distance.</p><a class="next-session" href="/activity?id=${encodeURIComponent(a.activity_id)}">Open recording, laps & zones →</a>` : ""}${history ? activityRows(runs()) : ""}`;
+  return `<div class="instrument"><p class="eyebrow">RECORDED AVERAGE PACE</p><div class="metric-big">${paceText(pace(a))} <small>/km</small></div><p class="classification">${esc(a?.name || "No recorded run")}</p><p class="stamp">${a ? dateLabel(a.start_local || a.start_iso) : "Record a run in Garmin Connect"}</p></div>${a ? `<div class="stats">${stat("Distance", valid(a.distance_m) && a.distance_m > 0 ? num(a.distance_m / 1000, 2) : "—", "km")}${stat("Duration", num(valid(a.duration_s) ? a.duration_s / 60 : null, 1), "min")}${stat("Average heart rate", num(a.avg_hr), "bpm")}${stat("Native load", num(a.training_load))}</div><p class="detail-copy">Average pace requires positive recorded distance and duration. Treadmill names are not used to guess distance.</p><a class="next-session" href="/activity?id=${encodeURIComponent(a.activity_id)}">Open recording, laps & zones →</a>` : ""}${history ? activityRows(runs()) : ""}`;
 }
 function details(def, view) {
   const s = summary(def);
@@ -811,13 +829,15 @@ function report(kind) {
       return `<a class="report-item" href="#metric/${id}/overview" style="--accent:${metricColor(def, s)}"><span class="report-number">0${i + 1}</span><div><h2>${esc(def.title)}</h2><div class="report-value">${esc(s.value)} <small>${esc(s.unit)}</small></div><p>${esc(s.sub)}</p><span class="stamp">${esc(s.date ? dateLabel(s.date) : "Not recorded")}</span></div></a>`;
     })
     .join("");
-  let session = "Open Train to set up your week and check in.";
-  let heading = morning ? "Today’s training" : "Tomorrow’s intention";
+  let session = trainingData?.profile
+    ? "Check tomorrow's updated running decision in Train."
+    : "Open Train to set up your running week.";
+  let heading = morning ? "Today’s run" : "Tomorrow’s running intention";
   if (morning && trainingData?.recommendation)
     session =
       trainingData.recommendation.title +
       " — " +
-      (trainingData.recommendation.summary ||
+      (trainingData.recommendation.target ||
         "See Train for reasons and limits.");
   if (!morning && trainingData?.running?.weekly_plan) {
     const tomorrow = new Date(
@@ -853,7 +873,6 @@ function render() {
     if ($(id)) $(id).open = true;
   });
   if (focusedId) $(focusedId)?.focus({ preventScroll: true });
-  clock();
   refreshTraining();
 }
 async function refreshTraining() {
@@ -1003,9 +1022,6 @@ window.addEventListener("hashchange", () => {
   window.scrollTo(0, 0);
   document.querySelector("h1")?.focus({ preventScroll: true });
 });
-setInterval(() => {
-  if (!document.hidden) clock();
-}, 1000);
 
 async function get(url, options) {
   const r = await fetch(url, options);

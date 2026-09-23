@@ -5,7 +5,7 @@ The Garmin Forerunner/fēnix interaction model is the reference: watch face → 
 ## Hierarchy and navigation
 
 - Persistent **Watch / Train / History** navigation on mobile and desktop. Login and activity details use the same dark palette.
-- Watch shows phone time, four selectable complications and a direct training entry. Measurement dates remain separate from the clock.
+- Watch starts with Today, date, a runner emblem and HYROX countdown—not phone time. Four configurable fields use metric-specific SVG icons and compact bounded-score rails, followed by a direct running entry. The instrument graphics are lightweight 2D SVG; no Three.js runtime.
 - Default glances: readiness, training status, last run, running week, recovery, HRV, Body Battery and sleep. Pin/unpin, reorder and configure the four face fields in a native dialog. Only metric IDs and layout preferences enter local storage, never health values.
 - Every glance opens its own Overview / History screen. Buttons, browser Back and horizontal swipes provide navigation. Historical values have 7/28/90-day controls and accessible tables.
 - Morning/evening reports summarize latest dated readings and the planner's today/tomorrow context. Label them CIRQA summaries, not Garmin-generated reports. Future schedule entries are intentions, not recovery clearance.
@@ -30,9 +30,11 @@ Unchanged polling responses do not rebuild the screen. Preserve chart range, ope
 
 ## Training
 
-Train separates Today / Your week / Load & trends. Run / Strength / HYROX launchers lead to the existing decision or saved week; they never start a band recording. Preferences, symptoms and session feedback remain focused dialogs, preserving unsaved input across reads and closes. Nothing is saved until the owner submits it.
+Train is running-only: **Today / This week / Race plan**. First use provides one setup call to action. Once configured, Today prioritizes run type, total minutes, estimated kilometres and the main-work min/km or treadmill km/h target, then explicit step targets. The unit toggle changes presentation only. Recovery and this week's recorded distance sit alongside the decision on desktop and below it on phones. Ladder owns strength; no strength launchers, equipment or routine builder.
 
-The optional phone workout guide snapshots an eligible timed recommendation. Large foreground countdown, pause/resume, next, reset and finish. Controlled repeats expose individual work/recovery segments. Steps stop at zero; the user advances manually. Closing pauses; leaving while running warns. No background audio/notifications, live HR/pace, CIRQA recording control or fabricated completed activity. A new blocked recommendation removes the guide. Symptoms remain a reason to stop, never something a timer can clear.
+Setup uses running days, available time, recent experience, race date and optional personal pace/speed and usual weekly-kilometre benchmarks. Daily check-in offers an explicit no-symptoms action or a detailed dialog. Setup/check-in/feedback retain unsaved input across reads and closes; nothing saves until submitted. The weekly view separates recorded kilometres from the volume guide and discloses missing treadmill distances. Race weeks stay provisional. Load/comparison/calendar tools remain available in a secondary disclosure rather than competing with today's run.
+
+The optional phone workout guide snapshots an eligible timed recommendation, showing each step's pace/speed and estimated kilometres when known. Large foreground countdown, pause/resume, next, reset and finish. Controlled repeats expose individual work/recovery segments. Steps stop at zero; the user advances manually. Closing pauses; leaving while running warns. No background audio/notifications, live HR/pace, CIRQA recording control or fabricated completed activity. A new blocked recommendation removes the guide. Symptoms remain a reason to stop, never something a timer can clear.
 
 Native Garmin load, acute load and optional session-RPE retain independent units. Unknown load is not a rest day. Training reasons, coverage, policy limits and calendar provenance stay accessible; scheduled workouts are not relabeled watch Daily Suggested Workouts.
 

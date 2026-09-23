@@ -174,32 +174,73 @@ h3 {
   padding: 28px 26px;
   background: #0b0e12;
 }
-.clock-row {
+.today-face-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 22px;
 }
-.clock-date {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+.today-face-head .eyebrow {
+  margin-bottom: 8px;
 }
-.device-time {
-  font-size: 9px;
-  color: var(--muted);
+.today-face-head h1 {
+  font-size: 48px;
+  line-height: 1;
+  margin: 0;
+  letter-spacing: -2px;
 }
-.clock {
-  font-size: 100px;
-  line-height: 1.05;
-  letter-spacing: -6px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  margin: 16px 0 22px;
+.today-emblem {
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  width: 64px;
+  height: 64px;
   color: var(--green);
 }
-.clock span {
-  color: var(--ink);
+.today-emblem .metric-icon,
+.today-emblem .metric-icon svg {
+  width: 39px;
+  height: 39px;
+  color: inherit;
+}
+.race-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 20px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.race-ribbon > span {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.race-ribbon strong {
+  color: var(--green);
+}
+.comp-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+}
+.comp-heading .metric-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.comp-meter {
+  height: 3px;
+  background: var(--line);
+  max-width: 96px;
+  margin: 8px 0;
+}
+.comp-meter i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
 }
 .complications {
   display: grid;
@@ -896,14 +937,6 @@ select {
     padding: 23px 24px;
     border-radius: 17px;
   }
-  .clock {
-    font-size: 92px;
-    letter-spacing: -5px;
-    margin: 15px 0 18px;
-  }
-  .clock-date {
-    font-size: 11px;
-  }
   .comp-value {
     font-size: 29px;
   }
@@ -967,9 +1000,6 @@ select {
   .shell {
     padding-left: 16px;
     padding-right: 16px;
-  }
-  .clock {
-    font-size: 78px;
   }
   .watch-face {
     padding: 22px 18px;

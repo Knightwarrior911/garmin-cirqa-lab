@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#080a0d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="CIRQA" />
-    <title>Training · CIRQA</title>
+    <title>Running · CIRQA</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="stylesheet" href="/training.css" />
@@ -50,29 +50,18 @@
       </nav>
       <section class="page-heading">
         <div>
-          <p class="eyebrow" id="training-date">YOUR NEXT SESSION</p>
-          <h1>Train</h1>
-          <p class="muted">HYROX preparation · Running &amp; strength</p>
+          <p class="eyebrow" id="training-date">YOUR RUNNING COACH</p>
+          <h1>Running</h1>
+          <p class="muted">Your runs here. Your strength plan in Ladder.</p>
         </div>
-        <span class="goal-chip" id="goal-chip">HYROX focus</span>
+        <div id="race-countdown" class="race-countdown"></div>
       </section>
-      <div class="activity-launcher" aria-label="Training activity">
-        <button type="button" data-launch="run">
-          <strong>Run</strong><small>Session & pace</small>
-        </button>
-        <button type="button" data-launch="strength">
-          <strong>Strength</strong><small>Gym days</small>
-        </button>
-        <button type="button" data-launch="hyrox">
-          <strong>HYROX</strong><small>Your combined week</small>
-        </button>
-      </div>
-      <p id="message" class="status" role="status" aria-live="polite">
-        Loading your training…
+      <p id="message" class="status" role="status">
+        Loading your running plan…
       </p>
       <div id="error" class="error" role="alert" hidden></div>
       <div id="training-content" hidden>
-        <div class="view-tabs" role="tablist" aria-label="Training views">
+        <div class="view-tabs" role="tablist" aria-label="Running views">
           <button
             id="today-tab"
             role="tab"
@@ -89,265 +78,228 @@
             tabindex="-1"
             data-view="week"
           >
-            Your week</button
+            This week</button
           ><button
-            id="load-tab"
+            id="race-tab"
             role="tab"
             aria-selected="false"
-            aria-controls="load-panel"
+            aria-controls="race-panel"
             tabindex="-1"
-            data-view="load"
+            data-view="race"
           >
-            Load & trends
+            Race plan
           </button>
         </div>
         <div id="today-panel" role="tabpanel" aria-labelledby="today-tab">
-          <div class="training-layout">
+          <section id="first-use" class="how-to" hidden>
+            <h2>One setup. Then open Today.</h2>
+            <ol>
+              <li>
+                Choose your running days and comfortable pace or treadmill
+                speed.
+              </li>
+              <li>
+                Each day, confirm how you feel. We use your recovery and this
+                week's runs.
+              </li>
+              <li>
+                Follow the run, record it on CIRQA, then sync Garmin Connect.
+              </li>
+            </ol>
+            <button type="button" class="primary" data-open="profile-dialog">
+              Set up my running plan
+            </button>
+          </section>
+          <div class="today-layout">
             <section
-              class="session-card"
               id="recommendation"
+              class="session-card"
               aria-labelledby="recommendation-title"
             >
               <div class="sectionhead">
-                <p class="eyebrow">TODAY'S SESSION</p>
+                <p class="eyebrow">TODAY'S RUN</p>
                 <span id="decision-state" class="badge"></span>
               </div>
-              <h2 id="recommendation-title"></h2>
-              <p id="decision-target" class="session-target"></p>
-              <div id="demand-line" class="demand-line" hidden>
-                <span>Session demand</span
-                ><strong id="decision-demand"></strong>
+              <div class="session-heading">
+                <span
+                  id="session-icon"
+                  class="sport-emblem"
+                  aria-hidden="true"
+                ></span>
+                <h2 id="recommendation-title"></h2>
               </div>
+              <p id="decision-target" class="session-target"></p>
+              <div id="session-metrics" class="session-metrics"></div>
+              <div
+                id="surface-toggle"
+                class="segments"
+                aria-label="Target units"
+              >
+                <button type="button" data-surface="outdoor">
+                  Outdoor · min/km</button
+                ><button type="button" data-surface="treadmill">
+                  Treadmill · km/h
+                </button>
+              </div>
+              <p id="target-note" class="small muted"></p>
+              <div id="adjustments" class="adjustments" hidden></div>
               <ol id="decision-steps" class="steps"></ol>
-              <button type="button" id="guide-open" hidden>
-                Open workout guide →
+              <button type="button" id="guide-open" class="primary" hidden>
+                Start run guide</button
+              ><button
+                type="button"
+                id="decision-action"
+                data-open="profile-dialog"
+              >
+                Edit running plan
               </button>
-              <button type="button" id="decision-action" class="primary">
-                Set up your week
-              </button>
+              <div id="quick-checkin" class="quick-checkin">
+                <p id="checkin-summary"></p>
+                <button type="button" id="feeling-good">
+                  <strong>I feel good</strong
+                  ><small>No fatigue, soreness, pain or illness</small></button
+                ><button type="button" data-open="checkin-dialog">
+                  Tired, sore or something else
+                </button>
+              </div>
               <div class="session-foot">
-                <p id="decision-source"></p>
                 <details>
-                  <summary>Why this session?</summary>
+                  <summary>Why this run today?</summary>
                   <ul id="decision-reasons"></ul>
                 </details>
                 <details>
-                  <summary>Limits & missing information</summary>
+                  <summary>How targets are chosen</summary>
+                  <p id="baseline-note"></p>
                   <ul id="decision-limits"></ul>
+                  <p id="decision-source" class="small muted"></p>
                 </details>
               </div>
             </section>
-            <aside class="running-summary">
-              <article class="pace-card">
-                <div class="sectionhead">
-                  <p class="eyebrow">LAST RUN · AVG PACE</p>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 17a9 9 0 1 1 16 0M12 13l5-6M8 20h8" />
-                  </svg>
-                </div>
-                <div class="pace-number">
-                  <span id="last-pace">—</span><small>/km</small>
-                </div>
-                <p id="last-run-meta" class="muted">
-                  No recorded run available
-                </p>
-                <a id="last-run-link" href="/activities"
-                  >Explore your runs <span aria-hidden="true">↗</span></a
-                >
-              </article>
-              <article class="run-volume">
-                <p class="eyebrow">LAST 28 DAYS</p>
-                <div class="volume-values">
-                  <div>
-                    <strong id="running-distance">—</strong
-                    ><span>km recorded</span>
-                  </div>
-                  <div>
-                    <strong id="running-count">—</strong><span>runs</span>
-                  </div>
-                </div>
-                <p class="small muted">
-                  Recorded sessions, not a target to chase.
-                </p>
-              </article>
-              <button
-                class="checkin-button"
-                type="button"
-                data-open="checkin-dialog"
-              >
-                <span
-                  ><strong>How are you feeling?</strong
-                  ><small id="checkin-summary">Your daily check-in</small></span
-                ><span aria-hidden="true">→</span>
-              </button>
+            <aside>
+              <section class="card">
+                <p class="eyebrow">THIS WEEK · RUNNING</p>
+                <div id="week-glance" class="week-glance"></div>
+                <button type="button" id="open-week" class="quiet">
+                  See your running week →
+                </button>
+              </section>
+              <section class="card recovery-card">
+                <p class="eyebrow">TODAY'S RECOVERY</p>
+                <div id="recovery-metrics"></div>
+                <a href="/">Open all native metrics →</a>
+              </section>
             </aside>
           </div>
-          <div class="sectionhead section">
-            <div>
-              <h2>Training load</h2>
-              <p class="muted small">
-                Your recorded work, separate from today's prescription.
-              </p>
-            </div>
-            <button type="button" data-open="feedback-dialog" class="quiet">
-              Rate a session →
-            </button>
-          </div>
-          <section class="load-grid" aria-label="Recorded training load">
-            <article class="load-tile">
-              <span class="metric-dot blue"></span>
-              <p>Today’s exercise load</p>
-              <strong id="today-load" class="number">—</strong
-              ><span class="unit">Garmin units</span>
-              <p id="load-coverage" class="small muted"></p>
-            </article>
-            <article class="load-tile">
-              <span class="metric-dot purple"></span>
-              <p>Acute load</p>
-              <strong id="acute-load" class="number">—</strong
-              ><span class="unit">Garmin rolling estimate</span>
-              <p id="acute-date" class="small muted"></p>
-            </article>
-            <article class="load-tile">
-              <span class="metric-dot mint"></span>
-              <p>Your reported effort</p>
-              <strong id="rpe-load" class="number">—</strong
-              ><span class="unit">Session-RPE units</span>
-              <p id="rpe-coverage" class="small muted"></p>
-            </article>
-          </section>
-          <p class="small muted load-note">
-            Load is not a gym strain quota. Unknown is not zero; Garmin load and
-            session-RPE are different units.
-          </p>
         </div>
         <div id="week-panel" role="tabpanel" aria-labelledby="week-tab" hidden>
           <section class="card">
             <div class="sectionhead">
-              <div>
-                <p class="eyebrow">RUNNING + STRENGTH</p>
-                <h2>Your next seven days</h2>
-              </div>
-              <button type="button" class="quiet" data-open="profile-dialog">
-                Edit schedule
+              <h2>Your running week</h2>
+              <button type="button" data-open="profile-dialog">
+                Edit days
               </button>
             </div>
+            <div id="week-totals"></div>
             <p id="week-note" class="muted"></p>
             <div id="week-plan" class="week-plan"></div>
-            <p class="small muted">
-              Schedule intentions, not seven cleared workouts. Today’s check-in
-              and recorded recovery decide today’s session.
-            </p>
           </section>
-          <section class="section card">
-            <details>
-              <summary>Garmin calendar</summary>
-              <p id="native-status" class="small muted"></p>
-              <div id="native-workouts"></div>
-              <p class="small muted">
-                Scheduled calendar workouts are not verified watch Daily
-                Suggested Workouts. An empty calendar does not mean your watch
-                has no suggestion.
-              </p>
-              <a
-                href="https://connect.garmin.com/modern/calendar"
-                target="_blank"
-                rel="noopener noreferrer"
-                >Open Garmin calendar ↗</a
-              >
-            </details>
+          <section class="section">
+            <div class="sectionhead">
+              <h2>Recent runs</h2>
+              <button type="button" data-open="feedback-dialog">
+                Rate a session
+              </button>
+            </div>
+            <p class="muted small">
+              Recorded kilometres, not miles. Missing treadmill distance cannot
+              establish pace: enter the distance in Garmin Connect after
+              recording, then sync.
+            </p>
+            <div id="recent-runs"></div>
           </section>
         </div>
-        <div id="load-panel" role="tabpanel" aria-labelledby="load-tab" hidden>
+        <div id="race-panel" role="tabpanel" aria-labelledby="race-tab" hidden>
           <section class="card">
             <div class="sectionhead">
-              <div>
-                <p class="eyebrow">RECORDED EXERCISE</p>
-                <h2>Load over time</h2>
-              </div>
-              <div class="segments" aria-label="Comparison period">
-                <button data-period="7" aria-pressed="true">7 days</button
-                ><button data-period="28" aria-pressed="false">28 days</button>
-              </div>
+              <h2>Road to HYROX</h2>
+              <button type="button" data-open="profile-dialog">
+                Edit plan
+              </button>
             </div>
-            <div
-              id="load-chart"
-              class="chart"
-              aria-label="Daily recorded exercise load"
-            ></div>
+            <p id="race-intro" class="muted"></p>
+            <div id="race-plan"></div>
             <p class="small muted">
-              Gaps are unknown days, not rest. Amber marks partial activity
-              coverage.
+              Future weeks are intentions, not cleared workouts. Today adapts to
+              your recovery and recorded work. No missed kilometres to make up.
+              Ladder remains your strength programme.
             </p>
-            <details>
-              <summary>Recorded values</summary>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Garmin load</th>
-                      <th>Activities with load</th>
-                      <th>Session-RPE load</th>
-                    </tr>
-                  </thead>
-                  <tbody id="load-table"></tbody>
-                </table>
-              </div>
-            </details>
-          </section>
-          <section class="section">
-            <h2>What changed?</h2>
-            <p id="comparison-dates" class="small muted"></p>
-            <div id="comparisons" class="comparison-grid"></div>
-            <details class="card section">
-              <summary>Observations & coverage</summary>
-              <ul id="insights" class="insights"></ul>
-              <p class="small muted">
-                These are descriptions, not causes. Changes require 75% day
-                coverage in both completed periods; this is a display rule, not
-                statistical validation.
-              </p>
-            </details>
-          </section>
-          <section class="section">
-            <div class="sectionhead">
-              <h2>Recent sessions</h2>
-              <a href="/activities">All activities →</a>
-            </div>
-            <div id="activity-list" class="activity-grid"></div>
           </section>
         </div>
-        <details class="method section">
-          <summary>About load & training guidance</summary>
-          <p class="small muted">
-            Exercise load does not measure all-day strain or muscle damage.
-            Session-RPE is duration × your reported effort, in separate
-            arbitrary units. This planner is a conservative training aid, not
-            medical clearance or Garmin’s coaching algorithm. Pain or illness
-            overrides the session. Recommendations require today’s readiness
-            measured within 12 hours; future timestamps are rejected. Thresholds
-            are disclosed product rules, not validated personal limits.
+        <details class="supporting section">
+          <summary>Training load, feedback & Garmin calendar</summary>
+          <div class="load-grid">
+            <article class="card">
+              <p>Today's native load</p>
+              <strong id="today-load"></strong>
+              <p id="load-coverage" class="small muted"></p>
+            </article>
+            <article class="card">
+              <p>Acute load</p>
+              <strong id="acute-load"></strong>
+              <p id="acute-date" class="small muted"></p>
+            </article>
+            <article class="card">
+              <p>Your session-RPE</p>
+              <strong id="rpe-load"></strong>
+              <p id="rpe-coverage" class="small muted"></p>
+            </article>
+          </div>
+          <p class="muted small">
+            Garmin load and session-RPE are separate units, not muscle-strain
+            quotas. Ladder is not connected directly; only synced recordings and
+            your check-in inform fatigue.
           </p>
-          <p class="small">
-            <a
-              href="https://www.garmin.com/en-US/garmin-technology/running-science/physiological-measurements/training-load/"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Garmin methodology</a
-            >
-            ·
-            <a
-              href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2017.00612/full"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Session-RPE evidence</a
-            >
-          </p>
+          <button type="button" data-open="feedback-dialog">
+            Rate a recorded session
+          </button>
+          <div class="segments">
+            <button data-period="7" aria-pressed="true">7 days</button
+            ><button data-period="28" aria-pressed="false">28 days</button>
+          </div>
+          <div id="load-chart" class="load-chart"></div>
+          <details>
+            <summary>Recorded load values</summary>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Garmin load</th>
+                    <th>Coverage</th>
+                    <th>Session-RPE</th>
+                  </tr>
+                </thead>
+                <tbody id="load-table"></tbody>
+              </table>
+            </div>
+          </details>
+          <p id="comparison-dates" class="small muted"></p>
+          <div id="comparisons" class="comparison-grid"></div>
+          <ul id="insights"></ul>
+          <details>
+            <summary>Garmin calendar</summary>
+            <p id="native-status" class="small muted"></p>
+            <div id="native-workouts"></div>
+            <p class="small muted">
+              Scheduled workouts are not verified watch Daily Suggested
+              Workouts.
+            </p>
+          </details>
         </details>
       </div>
       <footer>
-        Garmin measurements. Your training decisions. Private by design.
+        Running guidance for HYROX · Native recovery, your benchmarks and
+        recorded runs · Not medical clearance.
       </footer>
     </main>
     <dialog id="guide-dialog" aria-labelledby="guide-title">
@@ -371,6 +323,7 @@
       <p id="guide-progress" class="eyebrow"></p>
       <h3 id="guide-step"></h3>
       <output id="guide-clock" aria-live="off">00:00</output>
+      <p id="guide-target" class="guide-target"></p>
       <p id="guide-detail"></p>
       <p id="guide-state" class="muted small" role="status"></p>
       <div class="guide-controls">
@@ -386,142 +339,129 @@
     <dialog id="profile-dialog" aria-labelledby="profile-title">
       <div class="dialog-head">
         <div>
-          <p class="eyebrow">YOUR PLAN</p>
-          <h2 id="profile-title">Make room for running.</h2>
+          <p class="eyebrow">RUNNING ONLY</p>
+          <h2 id="profile-title">Your running setup</h2>
         </div>
-        <button
-          type="button"
-          data-close
-          aria-label="Close training preferences"
-        >
+        <button type="button" data-close aria-label="Close running setup">
           ×
         </button>
       </div>
-      <p class="muted">
-        Set your available days. We’ll keep gym work and your runs together.
-      </p>
+      <p class="muted">No strength routine to enter. Keep using Ladder.</p>
       <form id="profile-form">
         <fieldset>
-          <legend class="sr-only">Training preferences</legend>
-          <div class="two">
+          <legend class="sr-only">Running preferences</legend>
+          <h3>1 · When can you run?</h3>
+          <fieldset class="weekdays">
+            <legend>Running days</legend>
             <label
-              >Training goal<select name="goal" required>
-                <option value="hyrox">HYROX preparation</option>
-                <option value="endurance">Improve running / endurance</option>
-                <option value="general_fitness">General fitness</option>
-                <option value="strength">Established strength routine</option>
-              </select></label
+              ><input type="checkbox" name="weekday" value="0" /><span
+                >Mon</span
+              ></label
             ><label
-              >Primary activity<select name="sport" required>
-                <option value="running">Running / run-walk</option>
-                <option value="walking">Walking</option>
-                <option value="cycling">Cycling</option>
-                <option value="strength">Strength</option>
-              </select></label
+              ><input type="checkbox" name="weekday" value="1" /><span
+                >Tue</span
+              ></label
+            ><label
+              ><input type="checkbox" name="weekday" value="2" /><span
+                >Wed</span
+              ></label
+            ><label
+              ><input type="checkbox" name="weekday" value="3" /><span
+                >Thu</span
+              ></label
+            ><label
+              ><input type="checkbox" name="weekday" value="4" /><span
+                >Fri</span
+              ></label
+            ><label
+              ><input type="checkbox" name="weekday" value="5" /><span
+                >Sat</span
+              ></label
+            ><label
+              ><input type="checkbox" name="weekday" value="6" /><span
+                >Sun</span
+              ></label
             >
-          </div>
+          </fieldset>
           <div class="two">
             <label
-              >Time per session (minutes)<input
+              >Minutes available per run<input
                 name="minutes"
                 type="number"
                 min="10"
                 max="120"
                 step="1"
                 required
-                placeholder="e.g. 40" /></label
+                placeholder="e.g. 30" /></label
             ><label
-              >Running / activity experience<select name="experience" required>
-                <option value="">Choose experience</option>
-                <option value="beginner">Beginner / returning</option>
-                <option value="regular">Training regularly</option>
+              >Running recently<select name="experience" required>
+                <option value="">Choose</option>
+                <option value="beginner">New / returning</option>
+                <option value="regular">Regular for at least four weeks</option>
               </select></label
             >
           </div>
           <div class="two">
             <label
-              >Equipment<select name="equipment" required>
-                <option value="gym">Gym / weights</option>
-                <option value="none">None / bodyweight</option>
-                <option value="bike">Bike</option>
+              >HYROX race date<input
+                name="race_date"
+                type="date"
+                value="2026-10-25"
+                required /></label
+            ><label
+              >Usually running<select name="surface">
+                <option value="outdoor">Outdoors · min/km</option>
+                <option value="treadmill">On a treadmill · km/h</option>
               </select></label
-            ><label
-              >Race date <span class="muted">(optional)</span
-              ><input name="race_date" type="date"
-            /></label>
+            >
           </div>
-          <fieldset class="weekdays">
-            <legend>Running / primary training days</legend>
-            <label
-              ><input type="checkbox" name="weekday" value="0" /><span>M</span
-              ><span class="sr-only">onday</span></label
-            ><label
-              ><input type="checkbox" name="weekday" value="1" /><span>T</span
-              ><span class="sr-only">uesday</span></label
-            ><label
-              ><input type="checkbox" name="weekday" value="2" /><span>W</span
-              ><span class="sr-only">ednesday</span></label
-            ><label
-              ><input type="checkbox" name="weekday" value="3" /><span>T</span
-              ><span class="sr-only">hursday</span></label
-            ><label
-              ><input type="checkbox" name="weekday" value="4" /><span>F</span
-              ><span class="sr-only">riday</span></label
-            ><label
-              ><input type="checkbox" name="weekday" value="5" /><span>S</span
-              ><span class="sr-only">aturday</span></label
-            ><label
-              ><input type="checkbox" name="weekday" value="6" /><span>S</span
-              ><span class="sr-only">unday</span></label
-            >
-          </fieldset>
-          <fieldset class="weekdays" id="strength-days">
-            <legend>Strength days — HYROX plan</legend>
-            <label
-              ><input type="checkbox" name="strength_day" value="0" /><span
-                >M</span
-              ><span class="sr-only">onday</span></label
-            ><label
-              ><input type="checkbox" name="strength_day" value="1" /><span
-                >T</span
-              ><span class="sr-only">uesday</span></label
-            ><label
-              ><input type="checkbox" name="strength_day" value="2" /><span
-                >W</span
-              ><span class="sr-only">ednesday</span></label
-            ><label
-              ><input type="checkbox" name="strength_day" value="3" /><span
-                >T</span
-              ><span class="sr-only">hursday</span></label
-            ><label
-              ><input type="checkbox" name="strength_day" value="4" /><span
-                >F</span
-              ><span class="sr-only">riday</span></label
-            ><label
-              ><input type="checkbox" name="strength_day" value="5" /><span
-                >S</span
-              ><span class="sr-only">aturday</span></label
-            ><label
-              ><input type="checkbox" name="strength_day" value="6" /><span
-                >S</span
-              ><span class="sr-only">unday</span></label
-            >
-          </fieldset>
+          <h3>2 · Your comfortable running effort</h3>
           <p class="small muted">
-            Unchecked days remain rest days. Recent recorded runs inform
-            duration; a race date alone does not establish race pace or fitness.
+            Use a pace or belt speed where you can speak in full sentences. This
+            is your benchmark, not a race-pace prediction.
           </p>
-          <div id="routine-section" hidden>
-            <h3>Your established strength routine</h3>
+          <label
+            ><span id="easy-input-label">Easy pace (min:sec per km)</span
+            ><input
+              name="easy_target"
+              inputmode="decimal"
+              placeholder="e.g. 7:00"
+          /></label>
+          <p class="small muted">
+            Unknown? Leave blank for effort-only guidance. Garmin averages are
+            used only for explicitly easy-rated runs.
+          </p>
+          <label
+            >Usual weekly running kilometres<input
+              name="weekly_km"
+              type="number"
+              min="0"
+              max="250"
+              step="0.1"
+              placeholder="e.g. 12"
+          /></label>
+          <p class="small muted">
+            Especially useful when Garmin is missing runs or treadmill
+            distances. Enter what you already do, not the distance you hope to
+            reach.
+          </p>
+          <details>
+            <summary>Known tempo benchmark (optional)</summary>
             <p class="small muted">
-              Your usual movements, sets, reps and resistance. Use 0 kg for
-              bodyweight. No guessed weights or automatic increases.
+              Only enter a pace/speed you already sustain at comfortably hard
+              effort. Leave blank if you do not know it; no threshold is
+              guessed.
             </p>
-            <div id="routine-rows"></div>
-            <button id="add-movement" type="button">Add movement</button>
-          </div>
-          <button type="submit" class="primary">Save my plan</button>
-          <p class="form-result small" role="status" aria-live="polite"></p>
+            <label
+              ><span id="tempo-input-label">Tempo pace (min:sec per km)</span
+              ><input
+                name="tempo_target"
+                inputmode="decimal"
+                placeholder="Optional"
+            /></label>
+          </details>
+          <button type="submit" class="primary">Save my running plan</button>
+          <p class="form-result small" role="status"></p>
         </fieldset>
       </form>
     </dialog>

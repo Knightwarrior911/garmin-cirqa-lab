@@ -171,6 +171,19 @@ def connect_db(db_path=None):
     for column, kind in EXTRA_ACTIVITY_COLUMNS.items():
         if column not in activity_columns:
             conn.execute(f"ALTER TABLE activities ADD COLUMN {column} {kind}")
+    profile_row = conn.execute("SELECT value_json FROM training_documents WHERE kind='profile'").fetchone()
+    if profile_row:
+        profile = json.loads(profile_row["value_json"])
+        if isinstance(profile, dict) and "sport" in profile:
+            if profile["sport"] == "running":
+                profile = {"race_date": profile.get("race_date") or "2026-10-25",
+                           "weekdays": profile["weekdays"], "minutes": profile["minutes"],
+                           "experience": profile["experience"], "surface": "outdoor",
+                           "easy_pace_s_per_km": None, "tempo_pace_s_per_km": None, "weekly_km": None}
+                conn.execute("UPDATE training_documents SET value_json=? WHERE kind='profile'", (json.dumps(profile),))
+            else:
+                # Obsolete non-running prescriptions cannot become a running plan.
+                conn.execute("DELETE FROM training_documents WHERE kind='profile'")
     conn.commit()
     return conn
 

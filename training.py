@@ -11,7 +11,7 @@ import os
 from statistics import median
 from zoneinfo import ZoneInfo
 
-POLICY = "2"
+POLICY = "3"
 RUN_TYPES = frozenset(("running", "treadmill_running", "trail_running", "indoor_running", "track_running", "virtual_run", "ultra_run"))
 STRENGTH_TYPES = frozenset(("strength_training", "strength", "functional_strength_training", "crossfit", "hiit"))
 
@@ -52,69 +52,31 @@ def save_document(conn, kind, value):
 
 
 def save_profile(conn, payload):
-    if not isinstance(payload, dict):
-        raise ValueError("Supply a training profile.")
-    payload = dict(payload)
-    payload.setdefault("strength_days", [])
-    payload.setdefault("race_date", None)
-    object_fields(payload, ("goal", "sport", "weekdays", "minutes", "experience", "equipment", "routine", "strength_days", "race_date"))
-    for key, options in {
-        "goal": ("general_fitness", "endurance", "strength", "hyrox"),
-        "sport": ("walking", "running", "cycling", "strength"),
-        "experience": ("beginner", "regular"),
-        "equipment": ("none", "bike", "gym"),
-    }.items():
-        if payload[key] not in options:
-            raise ValueError(f"Choose a supported {key}.")
+    object_fields(payload, ("race_date", "weekdays", "minutes", "experience", "surface",
+                            "easy_pace_s_per_km", "tempo_pace_s_per_km", "weekly_km"))
+    try:
+        if not isinstance(payload["race_date"], str) or date.fromisoformat(payload["race_date"]).isoformat() != payload["race_date"]:
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ValueError("Choose a valid race date.") from None
     weekdays = payload["weekdays"]
     if not isinstance(weekdays, list) or not 1 <= len(weekdays) <= 7:
-        raise ValueError("Choose one to seven training days.")
-    weekdays = [bounded(day, 0, 6, "Weekday", True) for day in weekdays]
+        raise ValueError("Choose at least one running day.")
+    weekdays = [bounded(day, 0, 6, "Running weekday", True) for day in weekdays]
     if len(set(weekdays)) != len(weekdays):
-        raise ValueError("Training days must not repeat.")
-    strength_days = payload["strength_days"]
-    if not isinstance(strength_days, list) or len(strength_days) > 7:
-        raise ValueError("Choose up to seven strength days.")
-    strength_days = [bounded(day, 0, 6, "Strength weekday", True) for day in strength_days]
-    if len(set(strength_days)) != len(strength_days):
-        raise ValueError("Strength days must not repeat.")
-    if payload["goal"] == "hyrox" and payload["sport"] != "running":
-        raise ValueError("HYROX preparation uses running as the primary activity.")
-    if strength_days and payload["goal"] != "hyrox":
-        raise ValueError("Separate strength days are available for the HYROX plan.")
-    if set(strength_days) & set(weekdays):
-        raise ValueError("Choose separate running and strength days. This planner does not prescribe double sessions.")
-    race_date = payload["race_date"]
-    if race_date is not None:
-        try:
-            if not isinstance(race_date, str) or date.fromisoformat(race_date).isoformat() != race_date:
-                raise ValueError
-        except ValueError:
-            raise ValueError("Use a valid YYYY-MM-DD race date, or leave it blank.") from None
-    minutes = bounded(payload["minutes"], 10, 120, "Available minutes", True)
-    if (payload["goal"] == "strength") != (payload["sport"] == "strength"):
-        raise ValueError("Choose strength as both the goal and activity, or choose a cardio activity for a fitness/endurance goal.")
-    if payload["sport"] == "cycling" and payload["equipment"] != "bike":
-        raise ValueError("Cycling requires access to a bike.")
-    routine = payload["routine"]
-    if not isinstance(routine, list) or len(routine) > 12:
-        raise ValueError("A routine may contain up to 12 movements.")
-    if payload["sport"] == "strength" and not routine:
-        raise ValueError("Enter an established strength routine; CIRQA does not guess exercises or weights.")
-    if payload["sport"] != "strength" and routine:
-        raise ValueError("Clear the strength routine for a cardio profile.")
-    cleaned = []
-    for move in routine:
-        object_fields(move, ("name", "sets", "reps", "load_kg"))
-        load = bounded(move["load_kg"], 0, 300, "Resistance in kg")
-        if load and payload["equipment"] != "gym":
-            raise ValueError("A weighted routine requires gym/weights equipment.")
-        cleaned.append({
-            "name": text(move["name"], 80, "Movement", True),
-            "sets": bounded(move["sets"], 1, 5, "Sets", True),
-            "reps": bounded(move["reps"], 1, 30, "Repetitions", True), "load_kg": load,
-        })
-    save_document(conn, "profile", dict(payload, weekdays=sorted(weekdays), strength_days=sorted(strength_days), minutes=minutes, routine=cleaned))
+        raise ValueError("Running days must not repeat.")
+    if payload["experience"] not in ("beginner", "regular") or payload["surface"] not in ("outdoor", "treadmill"):
+        raise ValueError("Choose your running experience and surface.")
+    minutes = bounded(payload["minutes"], 10, 120, "Time available per run", True)
+    for key in ("easy_pace_s_per_km", "tempo_pace_s_per_km"):
+        if payload[key] is not None:
+            bounded(payload[key], 120, 1200, "Pace in seconds per kilometre")
+    easy, tempo = payload["easy_pace_s_per_km"], payload["tempo_pace_s_per_km"]
+    if tempo is not None and easy is not None and tempo >= easy:
+        raise ValueError("A known tempo pace must be faster than your comfortable easy pace. Leave it blank if unknown.")
+    if payload["weekly_km"] is not None:
+        bounded(payload["weekly_km"], 0, 250, "Usual weekly kilometres")
+    save_document(conn, "profile", dict(payload, weekdays=sorted(weekdays), minutes=minutes))
 
 
 def save_feedback(conn, payload):
@@ -177,243 +139,314 @@ def aggregate(activities):
 def run_records(activities, today):
     start = (today - timedelta(days=28)).isoformat()
     return [a for a in activities if a.get("type") in RUN_TYPES and activity_day(a)
-            and start <= activity_day(a) < today.isoformat()
+            and start <= activity_day(a) <= today.isoformat()
             and finite(a.get("duration_s")) and a["duration_s"] > 0]
 
 
-def established_running(recent):
-    dates = sorted({activity_day(a) for a in recent if a["duration_s"] >= 20 * 60})
-    return len(dates) >= 6 and (date.fromisoformat(dates[-1]) - date.fromisoformat(dates[0])).days >= 14
+def run_distance(activity):
+    value = activity.get("distance_m")
+    # An elapsed treadmill recording with zero distance cannot establish mileage.
+    return value / 1000 if finite(value) and value > 0 else None
 
 
-def quality_weekday(profile):
-    if not profile or profile["goal"] not in ("hyrox", "endurance") or profile["sport"] != "running":
+def quality_run(activity):
+    effort = (activity.get("feedback") or {}).get("rpe")
+    label = str(activity.get("effect_label") or "").upper()
+    return ((finite(effort) and effort >= 6)
+            or (finite(activity.get("aerobic_effect")) and activity["aerobic_effect"] >= 3.5)
+            or any(k in label for k in ("TEMPO", "THRESHOLD", "VO2", "ANAEROBIC")))
+
+
+def running_baseline(profile, recent, today):
+    p = profile or {}
+    prior = [a for a in recent if activity_day(a) < today.isoformat() and a["duration_s"] >= 300]
+    easy_runs = [a for a in prior if run_distance(a) is not None and (
+        (finite((a.get("feedback") or {}).get("rpe")) and a["feedback"]["rpe"] <= 4)
+        or str(a.get("effect_label") or "").upper() in ("BASE", "RECOVERY", "AEROBIC_BASE"))]
+    easy = p.get("easy_pace_s_per_km")
+    source = "Your comfortable running benchmark" if easy is not None else "No usable easy-pace benchmark"
+    if easy is None and len(easy_runs) >= 2:
+        easy = round(median(a["duration_s"] / run_distance(a) for a in easy_runs), 1)
+        source = f"Median of {len(easy_runs)} recorded easy-rated runs"
+    monday = today - timedelta(days=today.weekday())
+    completed = [a for a in prior if activity_day(a) < monday.isoformat()]
+    totals = {}
+    for a in completed:
+        if run_distance(a) is not None:
+            d = date.fromisoformat(activity_day(a))
+            week = (d - timedelta(days=d.weekday())).isoformat()
+            totals[week] = totals.get(week, 0) + run_distance(a)
+    weekly = p.get("weekly_km")
+    weekly_source = "Your reported usual weekly kilometres" if weekly is not None else "Weekly baseline not established"
+    # Exclude the partially observed earliest week in the 28-day lookback.
+    complete_start = today - timedelta(days=28)
+    complete_start += timedelta(days=(7 - complete_start.weekday()) % 7)
+    complete_totals = [v for k, v in totals.items() if k >= complete_start.isoformat()]
+    complete_runs = [a for a in completed if activity_day(a) >= complete_start.isoformat()]
+    if len(complete_totals) >= 3 and all(run_distance(a) is not None for a in complete_runs):
+        weekly = round(median(complete_totals), 1)
+        weekly_source = f"Median of {len(complete_totals)} complete recorded running weeks"
+    dates = sorted({activity_day(a) for a in prior if a["duration_s"] >= 1200})
+    recorded_base = len(dates) >= 6 and (date.fromisoformat(dates[-1]) - date.fromisoformat(dates[0])).days >= 14
+    established = p.get("experience") == "regular" and (recorded_base or (finite(p.get("weekly_km")) and p["weekly_km"] >= 8))
+    note = source + ". " + weekly_source + "."
+    if easy is None:
+        note += " Add the pace or treadmill speed at which you can comfortably talk; unclassified run averages are not used."
+    return {"source": source, "easy_pace_s_per_km": easy, "tempo_pace_s_per_km": p.get("tempo_pace_s_per_km"),
+            "weekly_km": weekly, "weekly_source": weekly_source, "established": established, "note": note}
+
+
+def race_phase(day, race):
+    remaining = (race - day).days
+    return ("post_race" if remaining < 0 else "race" if remaining == 0 else
+            "taper" if remaining <= 7 else "specific" if remaining <= 14 else "build" if remaining <= 28 else "base")
+
+
+def planned_kind(profile, day, race, established):
+    if day == race:
+        return "race"
+    if day > race or (race - day).days == 1 or not profile or day.weekday() not in profile["weekdays"]:
+        return "rest"
+    days = profile["weekdays"]
+    phase = race_phase(day, race)
+    if phase == "taper" or not established:
+        return "easy_run"
+    quality = next((d for d in days if (d - 1) % 7 not in days and (d + 1) % 7 not in days), None)
+    if len(days) >= 3 and day.weekday() == quality and day.weekday() != days[-1]:
+        return "interval_run" if phase == "specific" else "tempo_run"
+    if len(days) >= 2 and day.weekday() == days[-1]:
+        return "long_run"
+    return "easy_run"
+
+
+RUN_NAMES = {"easy_run": "Easy run", "recovery_run": "Recovery run", "tempo_run": "Tempo run",
+             "interval_run": "Controlled intervals", "long_run": "Long easy run", "rest": "No run planned",
+             "race": "HYROX race day"}
+PHASE_NAMES = {"base": "Settle into your running week", "build": "Easy volume + controlled tempo",
+               "specific": "HYROX running rhythm", "taper": "Freshen up for race day",
+               "race": "Race day", "post_race": "Recover and choose your next race"}
+
+
+def week_target(baseline, phase, profile):
+    km = baseline["weekly_km"]
+    if not finite(km) or km <= 0 or not profile:
         return None
-    busy = set(profile["weekdays"]) | set(profile.get("strength_days", []))
-    return next((day for day in sorted(profile["weekdays"]) if (day - 1) % 7 not in busy and (day + 1) % 7 not in busy), None)
+    # Maintain, rather than invent, a volume increase in a short race build.
+    factor = .6 if phase == "taper" else .9 if phase == "specific" else 0 if phase == "post_race" else 1
+    if baseline["easy_pace_s_per_km"]:
+        km = min(km, len(profile["weekdays"]) * profile["minutes"] * 60 / baseline["easy_pace_s_per_km"])
+    return round(km * factor, 1)
 
 
 def running_context(profile, activities, today):
-    recent = [a for a in activities if a.get("type") in RUN_TYPES and activity_day(a)
-              and (today - timedelta(days=27)).isoformat() <= activity_day(a) <= today.isoformat()]
-    distances = [a["distance_m"] for a in recent if finite(a.get("distance_m")) and a["distance_m"] >= 0]
-    last = next((a for a in activities if a.get("type") in RUN_TYPES and activity_day(a)
-                 and activity_day(a) <= today.isoformat() and finite(a.get("distance_m")) and a["distance_m"] > 0
-                 and finite(a.get("duration_s")) and a["duration_s"] > 0), None)
-    last_run = None if last is None else {
-        "activity_id": last["activity_id"], "date": activity_day(last), "name": last.get("name"),
-        "distance_m": last["distance_m"], "duration_s": last["duration_s"],
-        "pace_s_per_km": last["duration_s"] * 1000 / last["distance_m"],
-    }
-    plan = []
-    base_runs = run_records(activities, today)
-    quality = quality_weekday(profile) if profile and profile["experience"] == "regular" and profile["minutes"] >= 30 and established_running(base_runs) else None
-    for offset in range(7):
-        day = today + timedelta(days=offset)
-        kind, title, detail = "rest", "Rest day", "No structured session scheduled."
-        if not profile:
-            kind, title, detail = "unplanned", "Choose your training days", "Save your availability to build a running and strength schedule."
-        elif day.weekday() in profile.get("strength_days", []):
-            kind, title, detail = "strength", "Your gym session", "Use your established routine. Today's recovery and symptoms decide whether to maintain, reduce or defer it."
-        elif day.weekday() in profile["weekdays"]:
-            if profile["sport"] == "running":
-                kind, title, detail = "easy_run", "Easy aerobic run", "Conversational effort, RPE 3–4/10. Duration is bounded by recent recorded sessions."
-                if day.weekday() == quality:
-                    kind, title, detail = "controlled_run", "Controlled repeats / easy fallback", "A possible running-quality slot, not a cleared workout. Requires established running, fresh recovery and no adjacent demanding work."
-            else:
-                kind, title, detail = profile["sport"], "Planned " + profile["sport"], "Use today's decision and your saved constraints."
-        plan.append({"date": day.isoformat(), "kind": kind, "title": title, "detail": detail})
-    note = "A repeatable base week, not a race prediction or automatically progressive program."
-    if profile and profile.get("race_date"):
-        days_left = (date.fromisoformat(profile["race_date"]) - today).days
-        note += f" Race date: {profile['race_date']} ({days_left} days away)." if days_left >= 0 else " Your saved race date has passed; update it in your plan."
-    if len(distances) < len(recent):
-        note += f" Distance is partial: {len(distances)}/{len(recent)} recorded runs have distance."
-    return {"last_run": last_run, "runs_28d": len(recent),
-            "distance_28d_m": sum(distances) if distances or not recent else None,
-            "weekly_plan": plan, "note": note}
-
-
-def hyrox_session(profile, today, activities, modifiers, sleep, result):
-    """Bound running and lifting demand without converting load into a strain quota."""
-    if today.weekday() in profile.get("strength_days", []):
-        result["kind"] = "strength"
-        if modifiers:
-            result.update(status="caution", title="Reduce gym demand today", demand="Low · defer heavy work",
-                          target="Do not chase a strain number. Defer heavy lifting; light familiar movement is optional if comfortable.")
-            result["reasons"].append("Recovery modifiers: " + ", ".join(modifiers) + ".")
-            return result
-        result.update(status="suggestion", title="Keep your gym session controlled", demand="Moderate · no failure sets",
-                      target="Your usual routine, not extra volume. Keep about 3 repetitions in reserve; stop for pain or loss of form.")
-        warm = min(5, profile["minutes"] // 4)
-        result["steps"] = [
-            {"title": "Warm up", "minutes": warm, "detail": "Use familiar mobility and lighter warm-up sets; take longer if needed rather than rushing."},
-            {"title": "Your established strength work", "minutes": profile["minutes"] - 2 * warm, "detail": "Use your usual movements and manageable loads. Do not add sets to reach a Garmin load number. Leave roughly 3 repetitions in reserve; this is a conservative effort cue, not a measured strain threshold."},
-            {"title": "Finish easy", "minutes": warm, "detail": "Allow breathing to settle. Rate your whole-session effort after training."},
-        ]
-        result["limitations"].append("Gym movements and weights are not known for this HYROX profile; this is a demand guide, not an individualized lifting prescription.")
-        return result
     recent = run_records(activities, today)
-    durations = [a["duration_s"] / 60 for a in recent if a["duration_s"] >= 60]
-    minutes = min(profile["minutes"], max(1, int(median(durations)))) if durations else min(profile["minutes"], 20)
-    if not durations or profile["experience"] == "beginner" or modifiers:
-        minutes = min(minutes, 20)
-    if durations:
-        result["reasons"].append(f"Time is capped at your availability and the median of {len(durations)} recorded runs in the previous 28 days; no automatic volume increase.")
+    baseline = running_baseline(profile, recent, today)
+    race = date.fromisoformat(profile["race_date"] if profile else "2026-10-25")
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+    weekly = [a for a in recent if activity_day(a) >= monday.isoformat()]
+    known = [run_distance(a) for a in weekly if run_distance(a) is not None]
+    distance = round(sum(known), 2) if known or not weekly else None
+    phase = race_phase(today, race)
+    target = week_target(baseline, "post_race" if today > race else race_phase(min(monday + timedelta(days=3), race), race), profile)
+    remaining = round(max(0, target - distance), 2) if target is not None and distance is not None and len(known) == len(weekly) else None
+    recent_rows = [dict(a, pace_s_per_km=round(a["duration_s"] / run_distance(a), 1) if run_distance(a) is not None else None) for a in recent]
+    last = next((a for a in recent_rows if a["pace_s_per_km"] is not None), None)
+    if last:
+        last = dict(last, date=activity_day(last))
+    plan = []
+    for offset in range(7):
+        day = monday + timedelta(days=offset)
+        recorded = [a for a in weekly if activity_day(a) == day.isoformat()]
+        kind = planned_kind(profile, day, race, baseline["established"])
+        detail = "Future intention; today's recovery can shorten or replace it."
+        title = RUN_NAMES[kind]
+        if recorded:
+            kind, title = "completed", f"{len(recorded)} recorded run" + ("s" if len(recorded) != 1 else "")
+            vals = [run_distance(a) for a in recorded if run_distance(a) is not None]
+            detail = f"{sum(vals):.2f} km recorded · distance available for {len(vals)}/{len(recorded)} runs." if vals else "Recorded duration is available; running distance is missing."
+        elif day < today:
+            detail = "No run recorded. Do not make up missed mileage."
+        elif not profile:
+            title, detail = "Choose your running days", "Your strength plan stays in Ladder."
+        plan.append({"date": day.isoformat(), "kind": kind, "title": title, "detail": detail})
+    race_plan = []
+    cursor = monday
+    while cursor <= race and len(race_plan) < 53:
+        end = min(cursor + timedelta(days=6), race)
+        stage = race_phase(min(cursor + timedelta(days=3), race), race)
+        race_plan.append({"start": cursor.isoformat(), "end": end.isoformat(), "phase": stage,
+                          "title": PHASE_NAMES[stage], "target_km": week_target(baseline, stage, profile),
+                          "detail": "Keep your established volume; at most one separated quality run." if stage in ("base", "build") else
+                                    "Short controlled repeats, separated from demanding work; no extra mileage." if stage == "specific" else
+                                    "Reduce running volume, keep runs easy, and rest the day before HYROX. No catch-up sessions."})
+        if not baseline["established"] and stage in ("base", "build", "specific"):
+            race_plan[-1].update(title="Establish easy running",
+                                 detail="Keep runs short and conversational. Quality work needs an established running baseline; future dates do not establish one automatically.")
+        cursor += timedelta(days=7)
+    all_known = [run_distance(a) for a in recent if run_distance(a) is not None]
+    return {"last_run": last, "runs_28d": len(recent), "distance_28d_m": sum(all_known) * 1000 if all_known or not recent else None,
+            "weekly_plan": plan, "note": "Running only. Ladder handles strength. Recorded kilometres can be partial; future sessions are intentions, not recovery clearance.",
+            "week": {"start": monday.isoformat(), "end": sunday.isoformat(), "runs": len(weekly), "distance_km": distance,
+                     "known_distance_runs": len(known), "total_runs": len(weekly), "minutes": round(sum(a["duration_s"] for a in weekly) / 60, 1),
+                     "quality_runs": sum(quality_run(a) for a in weekly), "target_km": target, "remaining_km": remaining},
+            "baseline": baseline, "race": {"date": race.isoformat(), "days_left": (race - today).days,
+                                          "weeks_left": max(0, math.ceil((race - today).days / 7)), "phase": phase},
+            "race_plan": race_plan, "recent_runs": recent_rows}
+
+
+def run_step(title, minutes, detail, pace):
+    return {"title": title, "minutes": round(minutes, 2), "detail": detail, "pace_s_per_km": pace,
+            "speed_kmh": round(3600 / pace, 1) if pace else None,
+            "distance_km": round(minutes * 60 / pace, 3) if pace else None}
+
+
+def running_session(kind, minutes, baseline):
+    easy, tempo = baseline["easy_pace_s_per_km"], baseline["tempo_pace_s_per_km"]
+    gentle = round(easy * 1.15, 1) if easy else None
+    warm = min(5, minutes / 4)
+    steps = [run_step("Warm up", warm, "Start gently. Walk or jog; the displayed speed is a starting guide, not a minimum.", gentle)]
+    if kind == "interval_run":
+        segments = []
+        for i in range(1, 5):
+            segments.extend([run_step(f"Repeat {i} · controlled", 2, "RPE 6/10; controlled, not a sprint.", tempo),
+                             run_step(f"Repeat {i} · easy", 2, "Jog or walk until breathing settles.", gentle)])
+        steps.append({"title": "4 × 2 min controlled / 2 min easy", "minutes": 16,
+                      "detail": "Four controlled repeats, each followed by easy recovery.", "segments": segments,
+                      "pace_s_per_km": tempo, "speed_kmh": round(3600 / tempo, 1) if tempo else None, "distance_km": None})
+        steps.append(run_step("Cool down", minutes - warm - 16, "Easy jog or walk. Stop earlier if uncomfortable.", gentle))
     else:
-        result["limitations"].append("No usable recent running-duration baseline. Use run/walk as needed; the introductory cap is 20 minutes, not a fitness estimate.")
-    warm = min(5, minutes // 4) if minutes >= 4 else round(minutes / 4, 1)
-    result.update(status="suggestion", title=f"{minutes} min easy run", kind="easy_run", demand="Easy · RPE 3–4/10",
-                  target="Run at a pace where you can speak in full sentences. Walk breaks count.")
-    result["steps"] = [
-        {"title": "Warm up", "minutes": warm, "detail": "Walk, then jog gently. Let effort build gradually."},
-        {"title": "Easy running", "minutes": round(minutes - 2 * warm, 1), "detail": "RPE 3–4/10; full-sentence conversation. Slow down or walk if effort climbs."},
-        {"title": "Cool down", "minutes": warm, "detail": "Easy jog or walk. Stop sooner if symptoms develop."},
-    ]
-    if modifiers:
-        result["reasons"].append("Easy-only because of " + ", ".join(modifiers) + ". Rest is also acceptable.")
-    established = established_running(recent)
-    recent_work = [a for a in activities if activity_day(a) and (today - timedelta(days=2)).isoformat() <= activity_day(a) < today.isoformat()]
-    demanding = any(a.get("type") in STRENGTH_TYPES or
-                    (finite(a.get("aerobic_effect")) and a["aerobic_effect"] >= 3.5) or
-                    (finite((a.get("feedback") or {}).get("rpe")) and a["feedback"]["rpe"] >= 7)
-                    for a in recent_work)
-    ran_yesterday = any(a.get("type") in RUN_TYPES and activity_day(a) == (today - timedelta(days=1)).isoformat() for a in recent_work)
-    race_soon = bool(profile.get("race_date") and 0 <= (date.fromisoformat(profile["race_date"]) - today).days <= 7)
-    quality_slot = today.weekday() == quality_weekday(profile)
-    eligible = quality_slot and established and profile["experience"] == "regular" and minutes >= 30 and not modifiers and finite(sleep) and sleep >= 6 * 3600 and not demanding and not ran_yesterday and not race_soon
-    if eligible:
-        result.update(title="30 min controlled run", kind="controlled_run", demand="Controlled · RPE 6/10 on repeats",
-                      target="4 × 2 minutes comfortably hard, with 2 minutes easy after each. Controlled, never a sprint.")
-        result["steps"] = [
-            {"title": "Warm up", "minutes": 8, "detail": "Easy jogging, RPE 2–3/10; build gradually."},
-            {"title": "4 × (2 min controlled + 2 min easy)", "minutes": 16, "detail": "Controlled portions at RPE 6/10: short phrases, not gasping. Recover at an easy jog or walk. If you cannot recover comfortably, finish easy instead.",
-             "segments": [{"title": f"Repeat {i} · {title}", "minutes": 2, "detail": detail}
-                          for i in range(1, 5) for title, detail in [
-                              ("Controlled", "RPE 6/10; short phrases, never a sprint. Stop or finish easy if symptoms develop."),
-                              ("Easy recovery", "Easy jog or walk. Recover comfortably before the next repeat.")]]},
-            {"title": "Cool down", "minutes": 6, "detail": "Easy jog or walk, RPE 2–3/10."},
-        ]
-        result["reasons"].append("One separated weekly quality slot; at least six 20-minute runs across 14 days, a 30-minute duration baseline, no adjacent planned run/gym work and no recent recorded demanding session under this policy.")
-    elif quality_slot:
-        result["reasons"].append("Using the easy fallback: controlled repeats require an established running baseline, a 30-minute budget, adequate recorded sleep, fresh recovery and separation from demanding work. Race week also stays easy.")
-    result["limitations"].extend([
-        "No threshold or HYROX race pace is inferred from ordinary activity averages. Effort cues are used until a defensible pace prescription is available.",
-        "Six runs/14 days, 20-minute baseline sessions and the two-calendar-day demanding-work window are conservative product rules, not validated personal recovery limits. Unrecorded lifting is unknown.",
-        "This supports HYROX running preparation; station technique, sled loads and an individual race taper are not prescribed. Coordinate an established race plan with a coach.",
-    ])
-    return result
+        work_pace = tempo if kind == "tempo_run" else round(easy * 1.1, 1) if easy and kind == "recovery_run" else easy
+        cue = "Comfortably hard, RPE 6/10. Short phrases, never gasping." if kind == "tempo_run" else "RPE 2–3/10; very relaxed, walk breaks welcome." if kind == "recovery_run" else "Conversational, RPE 3–4/10. Slow down if you cannot speak full sentences."
+        steps.append(run_step(RUN_NAMES[kind], minutes - 2 * warm, cue, work_pace))
+        steps.append(run_step("Cool down", warm, "Finish gently; no sprint finish.", gentle))
+    return steps
 
 
-def recommendation(profile, checkin, today, days, activities, native, now_local):
-    result = {
-        "status": "setup", "title": "Build your training week",
-        "source": "CIRQA rules", "policy_version": POLICY, "reasons": [], "steps": [],
-        "limitations": [
-            "Conservative planning aid, not Garmin Daily Suggested Workouts or medical clearance.",
-            "This policy does not prescribe maximal efforts, predict injury, or automatically increase your workload.",
-        ],
-    }
-
-    def decision(status, title, reason):
-        result.update(status=status, title=title)
+def recommendation(profile, checkin, today, days, activities, native, now_local, running):
+    result = {"status": "setup", "title": "Set up your running plan", "kind": "rest", "source": "CIRQA running guidance",
+              "policy_version": POLICY, "reasons": [], "steps": [], "adjustments": [], "target": "", "demand": "",
+              "minutes": None, "distance_km": None, "pace_s_per_km": None, "speed_kmh": None,
+              "baseline_note": running["baseline"]["note"],
+              "limitations": ["Starting targets, not Garmin Daily Suggested Workouts, a validated personalised race plan or medical clearance.",
+                              "Paces come from your benchmarks or explicitly easy-rated runs. Slower warm-up/recovery targets are coaching estimates; adjust to effort.",
+                              "Readiness 25/50, sleep 6h, Body Battery 25, recovery 24h and symptom 4/7 boundaries are conservative product rules, not validated individual cut-offs."]}
+    def stop(status, title, reason):
+        result.update(status=status, title=title, target=reason)
         result["reasons"].append(reason)
         return result
-
     if checkin and (checkin["pain"] or checkin["illness"]):
-        result["limitations"].append("Do not use a wearable score to override pain or illness; seek appropriate care for concerning symptoms.")
-        return decision("rest", "No workout prescription today", "Your current check-in reports pain or illness.")
+        return stop("rest", "No run today", "Pain or illness overrides your plan and every wearable score. Seek appropriate care for concerning symptoms.")
     if not profile:
-        return decision("setup", result["title"], "Your goal, routine and practical constraints have not been saved.")
+        return stop("setup", result["title"], "Choose running days and your comfortable pace or treadmill speed. Ladder remains your strength plan.")
+    remaining_days = running["race"]["days_left"]
+    if remaining_days < 0:
+        return stop("setup", "Your race date has passed", "Update the race date before starting another training block.")
+    if remaining_days == 0:
+        result["kind"] = "race"
+        return stop("rest", "HYROX race day", "No extra training run today. Follow your established race strategy, event guidance and symptoms.")
+    if any(a.get("type") in RUN_TYPES and activity_day(a) == today.isoformat() and finite(a.get("duration_s")) and a["duration_s"] >= 300 for a in activities):
+        return stop("rest", "Your run is recorded", "Today's run counts. Review it in This week; no automatic second run or make-up mileage.")
+    kind = planned_kind(profile, today, date.fromisoformat(profile["race_date"]), running["baseline"]["established"])
+    if kind == "rest":
+        return stop("rest", "No run planned today", "Keep your chosen non-running day." if remaining_days > 1 else "Rest your legs the day before HYROX; no last-minute fitness session.")
     if not checkin:
-        return decision("checkin", "Complete today's check-in", "Yesterday's fatigue or soreness is not assumed to describe today.")
+        return stop("checkin", "How do your legs feel today?", "Confirm your symptoms before the app turns today's plan into a run.")
     if max(checkin["fatigue"], checkin["soreness"]) >= 7:
-        return decision("rest", "Defer demanding exercise today", "You reported fatigue or soreness of 7/10 or higher. This is a conservative product threshold, not a validated physiological cut-off.")
-    if today.weekday() not in set(profile["weekdays"]) | set(profile.get("strength_days", [])):
-        return decision("rest", "Keep your planned rest day", "Today is outside your chosen training days. Good readiness does not override your plan.")
-    if any(activity_day(a) == today.isoformat() for a in activities):
-        return decision("rest", "Your recorded activity counts today", "An activity is already recorded today. CIRQA does not automatically add a second session; review the recorded load and your existing plan.")
-    scheduled = [w for w in native["workouts"] if w.get("date") == today.isoformat()]
-    if scheduled:
-        return decision("caution", "Review your Garmin calendar workout", "A Garmin calendar workout exists for today. Check its current instructions in Garmin Connect rather than layering a CIRQA session on top.")
-    row = next((d for d in days if d["date"] == today.isoformat()), None)
-    readiness = row.get("training_readiness") if row else None
-    stamp = row.get("readiness_updated_at") if row else None
+        return stop("rest", "Recover today", "Reported fatigue or soreness is at least 7/10. Skip the run rather than chasing weekly kilometres.")
+    if any(w.get("date") == today.isoformat() for w in native["workouts"]):
+        return stop("caution", "Check today's Garmin workout", "A scheduled workout exists. Review it in Garmin Connect before adding a separate run.")
+    row = next((d for d in days if d["date"] == today.isoformat()), {})
+    stamp = row.get("readiness_updated_at")
     try:
         measured = datetime.fromisoformat(stamp)
         measured = measured.replace(tzinfo=now_local.tzinfo) if measured.tzinfo is None else measured.astimezone(now_local.tzinfo)
-        age_hours = (now_local - measured).total_seconds() / 3600
-        fresh = measured.date() == today and 0 <= age_hours <= 12
+        fresh = measured.date() == today and 0 <= (now_local - measured).total_seconds() <= 43200
     except (ValueError, TypeError):
         fresh = False
+    readiness = row.get("training_readiness")
     if not finite(readiness) or not fresh:
-        result["limitations"].append("Sync Garmin Connect and the dashboard. Missing or old readiness is not treated as recovery. The 12-hour freshness limit is a conservative product rule.")
-        return decision("caution", "Today's recovery context is incomplete", "No native training-readiness measurement from today and within the preceding 12 hours is available. No structured session is prescribed.")
-    result["reasons"].append(f"Garmin readiness: {readiness:g}/100, measured {stamp}. It is context, not an exercise clearance.")
+        return stop("caution", "Sync today's recovery first", "Sync CIRQA in Garmin Connect, then Sync now on Watch. Readiness must be from today and within 12 hours; missing is not recovered.")
+    result["reasons"].append(f"Native readiness {readiness:g}/100, recorded {stamp}; no live recovery countdown is assumed.")
     if readiness < 25:
-        return decision("rest", "Keep today low demand", "Garmin readiness is below 25. CIRQA conservatively defers structured training rather than setting a target strain.")
-    sleep = row.get("sleep_seconds")
-    modifiers = []
-    if readiness < 50:
-        modifiers.append("readiness below 50")
-    if finite(sleep) and sleep < 6 * 3600:
-        modifiers.append("recorded sleep below six hours")
-    if max(checkin["fatigue"], checkin["soreness"]) >= 4:
-        modifiers.append("reported fatigue or soreness at least 4/10")
-    if sleep is None:
-        result["limitations"].append("No sleep duration is recorded for today; sleep adequacy is unknown.")
-    recovery = row.get("recovery_time_hours")
-    if finite(recovery) and recovery > 0:
-        result["limitations"].append(f"Garmin reported {recovery:g} hours of recovery at the readiness update. This is not a live countdown or a prohibition on all movement.")
-    result["limitations"].append("Readiness 25/50, sleep six hours and check-in 4/7 cut-offs are disclosed conservative rules, not validated personal thresholds.")
-    sport = profile["sport"]
-    result["reasons"].append(f"Goal: {profile['goal'].replace('_', ' ')}. Today is a chosen training day; available time is {profile['minutes']} minutes.")
-    if profile["goal"] == "hyrox" or (profile["goal"] == "endurance" and sport == "running"):
-        return hyrox_session(profile, today, activities, modifiers, sleep, result)
-    if sport == "strength":
-        if modifiers:
-            return decision("caution", "Defer the saved strength routine", "Recovery modifiers: " + ", ".join(modifiers) + ". No substitute weights or muscle-strain estimates are invented.")
-        if today.weekday() in profile["weekdays"] and (today.weekday() - 1) % 7 in profile["weekdays"]:
-            return decision("caution", "Separate repeats of this strength routine", "The same routine is scheduled on consecutive days. Adjust your training days or follow an individually designed split instead.")
-        result["steps"] = [{"title": "Warm up", "minutes": None, "detail": "Use your established movement-specific warm-up; do not rush it to fit the time budget."}]
-        for move in profile["routine"]:
-            resistance = f"{move['load_kg']:g} kg as you entered" if move["load_kg"] else "bodyweight / no added resistance"
-            result["steps"].append({"title": move["name"], "minutes": None, "detail": f"Your saved routine: {move['sets']} sets × {move['reps']} repetitions, {resistance}. Use your usual rests; stop for pain or form breakdown."})
-        result["limitations"].append(f"These are your supplied prescriptions, not AI-selected weights. Stop at your {profile['minutes']}-minute budget rather than rushing unfinished sets. Exercise order and individual suitability are not validated by CIRQA.")
-        return decision("suggestion", "Repeat your established strength routine", "No progression is applied. Your saved movements, sets, repetitions and resistance are preserved.")
-    groups = {"walking": {"walking", "casual_walking"}, "running": {"running", "treadmill_running", "trail_running", "indoor_running"}, "cycling": {"cycling", "indoor_cycling", "road_biking", "mountain_biking"}}
-    recent = [a["duration_s"] / 60 for a in activities if a.get("type") in groups[sport]
-              and activity_day(a) and (today - timedelta(days=28)).isoformat() <= activity_day(a) < today.isoformat()
-              and finite(a.get("duration_s")) and a["duration_s"] >= 60]
-    minutes = profile["minutes"]
-    if recent:
-        minutes = min(minutes, max(1, int(median(recent))))
-        result["reasons"].append(f"Duration is capped at the median of {len(recent)} recorded same-sport sessions in the preceding 28 days, not increased automatically.")
+        return stop("rest", "Recovery instead of a run", "Native readiness is below 25. Do not chase the week's distance today.")
+    week, baseline = running["week"], running["baseline"]
+    if week["remaining_km"] is not None and week["remaining_km"] <= 0:
+        return stop("rest", "This week's running guide is met", "No extra running is needed to fill a target. Keep recovery and your existing Ladder plan in view.")
+    result["reasons"].append(f"This week: {week['runs']} recorded runs; {week['quality_runs']} identifiable quality runs. Distance coverage {week['known_distance_runs']}/{week['total_runs']}.")
+    if not baseline["established"]:
+        result["adjustments"].append("Start with easy running: an established recent running baseline has not been supplied or recorded.")
+    prior = [a for a in run_records(activities, today) if activity_day(a) < today.isoformat() and a["duration_s"] >= 300]
+    if baseline["established"] and finite(baseline["weekly_km"]) and baseline["easy_pace_s_per_km"]:
+        duration_base = baseline["weekly_km"] * baseline["easy_pace_s_per_km"] / 60 / len(profile["weekdays"])
     else:
+        duration_base = median(a["duration_s"] / 60 for a in prior) if prior else 20
+    minutes = min(profile["minutes"], max(10, int(duration_base)))
+    if kind == "long_run" and prior:
+        minutes = min(profile["minutes"], max(minutes, int(max(a["duration_s"] for a in prior) / 60)))
+    if not baseline["established"]:
         minutes = min(minutes, 20)
-        result["limitations"].append("No same-sport duration baseline in the preceding 28 days. A 20-minute maximum is a conservative introductory cap, not a fitness estimate; stop sooner if needed.")
-    if profile["experience"] == "beginner":
-        minutes = min(minutes, 20)
-        result["reasons"].append("Beginner sessions are capped at 20 minutes under this policy.")
-    if modifiers:
-        minutes = min(minutes, 20)
-        result["reasons"].append("Short, easy option only because of " + ", ".join(modifiers) + ". Rest is an acceptable alternative.")
-    warm = min(5, minutes // 4) if minutes >= 4 else round(minutes / 4, 1)
-    main = round(minutes - 2 * warm, 1)
-    descriptions = {
-        "walking": "Comfortable walking, able to converse normally. Do not chase a heart-rate target.",
-        "running": "Conversational running with walk breaks whenever needed. No pace or heart-rate target is inferred.",
-        "cycling": "Easy cycling on your available bike, at an effort that permits normal conversation; no invented watts or heart-rate zones.",
-    }
-    result["steps"] = [
-        {"title": "Ease in", "minutes": warm, "detail": "Start more gently than the main segment."},
-        {"title": "Easy " + sport, "minutes": main, "detail": descriptions[sport]},
-        {"title": "Ease out", "minutes": warm, "detail": "Gradually reduce effort; end earlier if uncomfortable."},
-    ]
-    if profile["goal"] == "endurance":
-        result["limitations"].append("This is aerobic-base maintenance, not a race-specific or progressive interval plan. No race goal, threshold pace or power has been inferred.")
-    result["limitations"].append("Recorded duration is exposure, not proof of tolerance. Reported pain/illness overrides the suggestion; stop if symptoms develop.")
-    return decision("suggestion", f"{minutes} minutes of easy {sport}", "The session is chosen from your goal and schedule; readiness only moderates it. No score target must be reached.")
+    recovery_flags = []
+    quality_flags = []
+    if readiness < 50: recovery_flags.append("readiness below 50")
+    sleep = row.get("sleep_seconds")
+    if finite(sleep) and sleep < 21600: recovery_flags.append("less than six hours' sleep")
+    if sleep is None: quality_flags.append("sleep duration unavailable")
+    if max(checkin["fatigue"], checkin["soreness"]) >= 4: recovery_flags.append("reported fatigue or sore legs")
+    if finite(row.get("body_battery_current")) and row["body_battery_current"] < 25: recovery_flags.append("low recorded Body Battery")
+    if str(row.get("hrv_status") or "").upper() in ("LOW", "UNBALANCED"): quality_flags.append("HRV outside your balanced range")
+    if finite(row.get("recovery_time_hours")) and row["recovery_time_hours"] > 24: quality_flags.append("more than 24 recorded recovery hours")
+    if finite(row.get("stress_avg")) and row["stress_avg"] > 50: quality_flags.append("elevated recorded daily stress")
+    recent_work = [a for a in activities if activity_day(a) and (today - timedelta(days=2)).isoformat() <= activity_day(a) <= today.isoformat()]
+    lifting = any(a.get("type") in STRENGTH_TYPES and finite(a.get("duration_s")) and a["duration_s"] >= 600 for a in recent_work)
+    if lifting: quality_flags.append("recent recorded strength/HIIT work; Ladder already adds demand")
+    if any(a.get("type") in RUN_TYPES and quality_run(a) for a in recent_work): quality_flags.append("a recent demanding run")
+    if any(a.get("type") in RUN_TYPES and activity_day(a) == (today - timedelta(days=1)).isoformat() for a in recent_work): quality_flags.append("you ran yesterday")
+    if week["quality_runs"]: quality_flags.append("this week's quality run is already recorded")
+    if week["known_distance_runs"] < week["total_runs"]: quality_flags.append("this week's running distance is incomplete")
+    original = kind
+    if recovery_flags:
+        kind, minutes = "recovery_run", min(minutes, 20)
+        result["adjustments"].append("Short recovery option instead: " + "; ".join(recovery_flags) + ". Rest is also acceptable.")
+    elif quality_flags and kind in ("tempo_run", "interval_run", "long_run"):
+        kind, minutes = "easy_run", min(minutes, 30)
+        result["adjustments"].append("Easy running replaces the planned session: " + "; ".join(quality_flags) + ".")
+    elif quality_flags:
+        result["reasons"].append("Keep it easy: " + "; ".join(quality_flags) + ".")
+    if kind in ("tempo_run", "interval_run") and minutes < (26 if kind == "interval_run" else 25):
+        kind = "easy_run"
+        result["adjustments"].append("Your current duration budget is too short for a separated warm-up, quality work and cool-down.")
+    if kind == "tempo_run": minutes = min(minutes, 25)
+    if kind == "interval_run": minutes = 30 if minutes >= 30 else 26
+    if remaining_days <= 7:
+        kind = "recovery_run" if kind == "recovery_run" else "easy_run"
+        minutes = min(minutes, 15 if remaining_days <= 3 else max(10, int(minutes * .65)))
+        result["adjustments"].append("Race-week taper: reduce volume and avoid hard running. Do not make up missed sessions.")
+    easy = baseline["easy_pace_s_per_km"]
+    if week["remaining_km"] is not None and easy:
+        budget_minutes = int(week["remaining_km"] * easy / 60)
+        if budget_minutes < 10:
+            return stop("rest", "No extra mileage to chase", "Less than a short easy session remains in this week's guide. Do not squeeze in a run just to hit a number.")
+        if minutes > budget_minutes:
+            kind, minutes = "easy_run", budget_minutes
+            result["adjustments"].append("Shortened to stay within this week's remaining running guide.")
+    steps = running_session(kind, minutes, baseline)
+    flattened = [part for step in steps for part in step.get("segments", [step])]
+    distance = round(sum(s["distance_km"] for s in flattened), 2) if all(s["distance_km"] is not None for s in flattened) else None
+    if distance is not None and week["remaining_km"] is not None and distance > week["remaining_km"]:
+        kind = "easy_run"
+        steps = running_session(kind, minutes, baseline)
+        distance = round(sum(s["distance_km"] for s in steps), 2)
+        result["adjustments"].append("Easy running replaces faster work to keep the estimated distance within this week's remaining guide.")
+    pace = baseline["tempo_pace_s_per_km"] if kind in ("tempo_run", "interval_run") else round(easy * 1.1, 1) if easy and kind == "recovery_run" else easy
+    if kind in ("tempo_run", "interval_run") and pace is None:
+        result["baseline_note"] += " Tempo pace is unknown: use the effort cue, or add your known tempo benchmark for numeric work-step targets."
+    result["reasons"].append(f"Planned {RUN_NAMES[original].lower()} in the {running['race']['phase'].replace('_', ' ')} phase, {remaining_days} days before HYROX.")
+    result.update(status="suggestion", kind=kind, title=RUN_NAMES[kind], minutes=minutes, steps=steps,
+                  distance_km=distance, pace_s_per_km=pace, speed_kmh=round(3600 / pace, 1) if pace else None,
+                  demand="Controlled · RPE 6/10 in work steps" if kind in ("tempo_run", "interval_run") else "Easy · conversational",
+                  target="Follow the steps below. Pace and treadmill speed refer to the main work; estimated distance includes warm-up and cool-down.")
+    return result
 
 
 def dashboard(conn, today_iso, period=7, now_local=None):
@@ -471,10 +504,21 @@ def dashboard(conn, today_iso, period=7, now_local=None):
         insights.append("There is not enough observed-day coverage in both completed periods to describe changes reliably. Missing readings have not been filled in.")
     native = {"checked_at": None, "last_success_at": None, "range_start": None, "range_end": None, "error": None, "workouts": [], "plans_count": None}
     native.update(document(conn, "native_workouts") or {})
+    running = running_context(profile, activities, today)
+    decision = recommendation(profile, checkin, today, days, activities, native, now_local, running)
+    for planned in running["weekly_plan"]:
+        if planned["date"] == today_iso and planned["kind"] != "completed":
+            planned.update(kind=decision["kind"], title=decision["title"], detail=decision["target"])
+    recovery = next((d for d in days if d["date"] == today_iso), {})
     return {
         "ok": True, "today": today_iso, "period": period, "profile": profile, "checkin": checkin,
+        "recovery": {"date": recovery.get("date"), "readiness": recovery.get("training_readiness"),
+                     "readiness_updated_at": recovery.get("readiness_updated_at"),
+                     "sleep_hours": recovery["sleep_seconds"] / 3600 if finite(recovery.get("sleep_seconds")) else None,
+                     "hrv_status": recovery.get("hrv_status"), "body_battery": recovery.get("body_battery_current"),
+                     "recovery_hours": recovery.get("recovery_time_hours"), "stress": recovery.get("stress_avg")},
         "load": {"today": aggregate(grouped.get(today_iso, [])), "acute": {"value": acute["acute_load"] if acute else None, "date": acute["date"] if acute else None}, "daily": daily},
         "comparisons": comparisons, "insights": insights, "activities": activities[:100], "native": native,
-        "running": running_context(profile, activities, today),
-        "recommendation": recommendation(profile, checkin, today, days, activities, native, now_local),
+        "running": running,
+        "recommendation": decision,
     }

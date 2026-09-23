@@ -21,7 +21,7 @@ class TrainingTests(unittest.TestCase):
         self.conn = store.connect_db(Path(self.folder.name) / "history.db")
         self.addCleanup(self.conn.close)
         self.today = "2026-09-22"
-        self.profile = {"goal": "endurance", "sport": "running", "weekdays": [1, 3, 5], "minutes": 40, "experience": "regular", "equipment": "none", "routine": []}
+        self.profile = {"race_date": "2026-10-25", "weekdays": [1, 3, 5], "minutes": 40, "experience": "regular", "surface": "treadmill", "easy_pace_s_per_km": 420, "tempo_pace_s_per_km": 360, "weekly_km": 15}
         self.checkin = {"date": self.today, "fatigue": 1, "soreness": 1, "pain": False, "illness": False}
 
     def ready(self):
@@ -30,7 +30,7 @@ class TrainingTests(unittest.TestCase):
         store.upsert_day(self.conn, {"date": self.today, "training_readiness": 80, "readiness_updated_at": self.today + "T08:00:00", "sleep_seconds": 8 * 3600})
 
     def decision(self):
-        return training.dashboard(self.conn, self.today, now_local=datetime(2026, 9, 22, 10))["recommendation"]
+        return training.dashboard(self.conn, self.today, now_local=datetime.fromisoformat(self.today + "T10:00:00"))["recommendation"]
 
     def test_zero_load_and_zero_effort_are_not_missing(self):
         store.upsert_activity(self.conn, {"activity_id": "1", "start_local": self.today + " 09:00:00", "duration_s": 1800, "training_load": 0})
@@ -76,21 +76,25 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(self.decision()["status"], "caution")
         self.assertEqual(self.decision()["steps"], [])
 
-    def test_recent_same_sport_duration_caps_plan_and_today_prevents_second_session(self):
+    def test_walking_does_not_cancel_run_but_recorded_run_prevents_second_session(self):
         self.ready()
-        for aid, minutes in (("1", 24), ("2", 30)):
-            store.upsert_activity(self.conn, {"activity_id": aid, "type": "running", "start_local": "2026-09-20 10:00:00", "duration_s": minutes * 60})
-        store.upsert_activity(self.conn, {"activity_id": "3", "type": "cycling", "start_local": "2026-09-20 10:00:00", "duration_s": 120 * 60})
-        self.assertEqual(sum(s["minutes"] for s in self.decision()["steps"]), 27)
-        store.upsert_activity(self.conn, {"activity_id": "4", "type": "running", "start_local": self.today + " 10:00:00", "duration_s": 1200})
+        store.upsert_activity(self.conn, {"activity_id": "walk", "type": "walking", "start_local": self.today + " 09:00:00", "duration_s": 1800, "distance_m": 2000})
+        session = self.decision()
+        self.assertEqual(session["status"], "suggestion")
+        self.assertLessEqual(session["minutes"], self.profile["minutes"])
+        store.upsert_activity(self.conn, {"activity_id": "run", "type": "running", "start_local": self.today + " 10:00:00", "duration_s": 1200, "distance_m": 3000})
         self.assertEqual(self.decision()["status"], "rest")
         self.assertEqual(self.decision()["steps"], [])
+        week = training.dashboard(self.conn, self.today)["running"]["week"]
+        self.assertEqual((week["runs"], week["distance_km"]), (1, 3))
 
-    def test_invalid_feedback_and_impossible_equipment_do_not_replace_saved_input(self):
+    def test_invalid_paces_and_feedback_preserve_saved_input(self):
         training.save_profile(self.conn, self.profile)
         with self.assertRaises(ValueError):
-            training.save_profile(self.conn, dict(self.profile, sport="cycling", equipment="none"))
-        self.assertEqual(training.document(self.conn, "profile")["sport"], "running")
+            training.save_profile(self.conn, dict(self.profile, tempo_pace_s_per_km=500))
+        with self.assertRaises(ValueError):
+            training.save_profile(self.conn, dict(self.profile, easy_pace_s_per_km=float("nan")))
+        self.assertEqual(training.document(self.conn, "profile"), self.profile)
         with self.assertRaises(ValueError):
             training.save_feedback(self.conn, {"activity_id": "missing", "rpe": 4, "soreness": 2, "notes": ""})
         store.upsert_activity(self.conn, {"activity_id": "1"})
@@ -100,66 +104,118 @@ class TrainingTests(unittest.TestCase):
             training.save_checkin(self.conn, dict(self.checkin, date="2026-09-21"), self.today)
         self.assertIsNone(training.document(self.conn, "checkin"))
 
-    def test_same_day_old_readiness_and_unspecified_strength_load_are_not_prescriptions(self):
+    def test_stale_and_future_readiness_do_not_allow_a_run(self):
         self.ready()
-        stale = training.dashboard(self.conn, self.today, now_local=datetime(2026, 9, 22, 21))["recommendation"]
-        self.assertEqual(stale["status"], "caution")
-        self.assertEqual(stale["steps"], [])
-        strength = dict(self.profile, goal="strength", sport="strength", equipment="gym", routine=[])
-        with self.assertRaises(ValueError):
-            training.save_profile(self.conn, strength)
-        strength["routine"] = [{"name": "Established squat", "sets": 2, "reps": 8, "load_kg": 20}]
-        training.save_profile(self.conn, strength)
-        self.assertEqual(self.decision()["status"], "suggestion")
-        training.save_checkin(self.conn, dict(self.checkin, soreness=4), self.today)
+        result = training.dashboard(self.conn, self.today, now_local=datetime(2026, 9, 22, 21))["recommendation"]
+        self.assertEqual((result["status"], result["steps"]), ("caution", []))
+        store.upsert_day(self.conn, {"date": self.today, "readiness_updated_at": self.today + "T11:00:00"})
         self.assertEqual(self.decision()["status"], "caution")
-        self.assertEqual(self.decision()["steps"], [])
 
     def seed_running_base(self):
         for index, offset in enumerate((4, 7, 10, 13, 16, 19)):
             day = (date.fromisoformat(self.today) - timedelta(days=offset)).isoformat()
             store.upsert_activity(self.conn, {"activity_id": f"run-{index}", "type": "running", "start_local": day + " 08:00:00", "duration_s": 2100, "distance_m": 5000})
 
-    def test_hyrox_quality_run_requires_established_base_and_respects_race_week(self):
-        self.profile = dict(self.profile, goal="hyrox", equipment="gym", strength_days=[4], race_date=None)
+    def test_unclassified_average_pace_is_not_an_easy_or_tempo_benchmark(self):
+        self.profile = dict(self.profile, easy_pace_s_per_km=None, tempo_pace_s_per_km=None, weekly_km=None)
         self.ready()
-        self.assertEqual(self.decision()["kind"], "easy_run")
         self.seed_running_base()
-        session = self.decision()
-        self.assertEqual(session["kind"], "controlled_run")
-        self.assertEqual(sum(step["minutes"] for step in session["steps"]), 30)
-        training.save_profile(self.conn, dict(self.profile, race_date="2026-09-25"))
-        self.assertEqual(self.decision()["kind"], "easy_run")
+        result = training.dashboard(self.conn, self.today)
+        self.assertEqual(result["running"]["last_run"]["pace_s_per_km"], 420)
+        self.assertIsNone(result["running"]["baseline"]["easy_pace_s_per_km"])
+        self.assertIsNone(self.decision()["distance_km"])
+        for aid in ("run-0", "run-1"):
+            training.save_feedback(self.conn, {"activity_id": aid, "rpe": 3, "soreness": None, "notes": ""})
+        baseline = training.dashboard(self.conn, self.today)["running"]["baseline"]
+        self.assertEqual(baseline["easy_pace_s_per_km"], 420)
+        self.assertIsNone(baseline["tempo_pace_s_per_km"])
 
-    def test_recent_lifting_downgrades_quality_and_gym_day_obeys_checkin(self):
-        self.profile = dict(self.profile, goal="hyrox", equipment="gym", strength_days=[4])
+    def test_tempo_targets_convert_to_treadmill_speed_and_account_for_all_steps(self):
         self.ready()
-        self.seed_running_base()
-        self.assertEqual(self.decision()["kind"], "controlled_run")
+        result = self.decision()
+        self.assertEqual(result["kind"], "tempo_run")
+        self.assertEqual((result["pace_s_per_km"], result["speed_kmh"]), (360, 10))
+        self.assertEqual(sum(s["minutes"] for s in result["steps"]), result["minutes"])
+        self.assertAlmostEqual(sum(s["distance_km"] for s in result["steps"]), result["distance_km"], places=2)
+        training.save_profile(self.conn, dict(self.profile, experience="beginner"))
+        beginner = self.decision()
+        self.assertEqual(beginner["kind"], "easy_run")
+        self.assertLessEqual(beginner["minutes"], 20)
+
+    def test_ladder_work_and_fatigue_reduce_running_instead_of_adding_strength(self):
+        self.ready()
+        self.assertEqual(self.decision()["kind"], "tempo_run")
         store.upsert_activity(self.conn, {"activity_id": "gym", "type": "strength_training", "start_local": "2026-09-21 18:00:00", "duration_s": 1800})
         self.assertEqual(self.decision()["kind"], "easy_run")
-        training.save_profile(self.conn, dict(self.profile, weekdays=[3, 5], strength_days=[1]))
-        session = self.decision()
-        self.assertEqual(session["kind"], "strength")
-        self.assertEqual(sum(step["minutes"] for step in session["steps"]), 40)
         training.save_checkin(self.conn, dict(self.checkin, soreness=4), self.today)
-        self.assertEqual(self.decision()["status"], "caution")
-        self.assertEqual(self.decision()["steps"], [])
+        self.assertEqual(self.decision()["kind"], "recovery_run")
+        training.save_profile(self.conn, dict(self.profile, weekdays=[3, 5]))
+        self.assertEqual(self.decision()["status"], "rest")
 
-    def test_pace_uses_actual_distance_and_week_keeps_gym_separate(self):
-        self.profile = dict(self.profile, goal="hyrox", equipment="gym", strength_days=[4])
+    def test_quality_already_this_week_is_not_repeated_after_two_day_window(self):
+        self.today = "2026-09-24"
+        self.profile = dict(self.profile, weekdays=[0, 1, 3, 5])
+        self.checkin = dict(self.checkin, date=self.today)
         self.ready()
-        self.seed_running_base()
-        store.upsert_activity(self.conn, {"activity_id": "zero-distance", "type": "running", "start_local": "2026-09-21 08:00:00", "duration_s": 500, "distance_m": 0})
-        context = training.dashboard(self.conn, self.today)["running"]
-        self.assertEqual(context["last_run"]["pace_s_per_km"], 420)
-        self.assertEqual(context["distance_28d_m"], 30000)
-        by_date = {day["date"]: day for day in context["weekly_plan"]}
-        self.assertEqual(by_date["2026-09-25"]["kind"], "strength")
-        self.assertEqual(by_date["2026-09-23"]["kind"], "rest")
-        with self.assertRaises(ValueError):
-            training.save_profile(self.conn, dict(self.profile, strength_days=[1]))
-        self.assertEqual(training.document(self.conn, "profile")["strength_days"], [4])
+        self.assertEqual(self.decision()["kind"], "tempo_run")
+        store.upsert_activity(self.conn, {"activity_id": "quality", "type": "running", "start_local": "2026-09-21 08:00:00", "duration_s": 1800, "distance_m": 5000, "effect_label": "TEMPO"})
+        self.assertEqual(self.decision()["kind"], "easy_run")
+        self.assertEqual(training.dashboard(self.conn, self.today)["running"]["week"]["quality_runs"], 1)
+
+    def test_faster_work_cannot_overspend_remaining_weekly_distance(self):
+        self.today = "2026-09-24"
+        self.profile = dict(self.profile, weekdays=[0, 1, 3, 5], weekly_km=16)
+        self.checkin = dict(self.checkin, date=self.today)
+        self.ready()
+        self.assertEqual(self.decision()["kind"], "tempo_run")
+        store.upsert_activity(self.conn, {"activity_id": "previous", "type": "running", "start_local": "2026-09-21 08:00:00", "duration_s": 5000, "distance_m": 12400})
+        session = self.decision()
+        self.assertEqual(session["kind"], "easy_run")
+        self.assertLessEqual(session["distance_km"], 3.6)
+        store.upsert_activity(self.conn, {"activity_id": "previous", "distance_m": 16000})
+        self.assertEqual(self.decision()["status"], "rest")
+
+    def test_zero_treadmill_distance_is_missing_not_zero_weekly_exposure(self):
+        self.ready()
+        store.upsert_activity(self.conn, {"activity_id": "treadmill", "type": "treadmill_running", "start_local": "2026-09-21 08:00:00", "duration_s": 500, "distance_m": 0})
+        result = training.dashboard(self.conn, self.today)["running"]
+        self.assertEqual(result["week"]["runs"], 1)
+        self.assertIsNone(result["week"]["distance_km"])
+        self.assertIsNone(result["week"]["remaining_km"])
+        self.assertIsNone(result["recent_runs"][0]["pace_s_per_km"])
+        self.assertEqual(self.decision()["kind"], "easy_run")
+
+    def test_race_week_tapers_then_prevents_pre_race_and_post_race_training(self):
+        self.ready()
+        training.save_profile(self.conn, dict(self.profile, race_date="2026-09-25"))
+        taper = self.decision()
+        self.assertEqual(taper["kind"], "easy_run")
+        self.assertLessEqual(taper["minutes"], 15)
+        training.save_checkin(self.conn, dict(self.checkin, soreness=4), self.today)
+        self.assertEqual(self.decision()["kind"], "recovery_run")
+        training.save_profile(self.conn, dict(self.profile, race_date="2026-09-23"))
+        self.assertEqual(self.decision()["status"], "rest")
+        training.save_profile(self.conn, dict(self.profile, race_date=self.today))
+        self.assertEqual((self.decision()["status"], self.decision()["kind"]), ("rest", "race"))
+        training.save_profile(self.conn, dict(self.profile, race_date="2026-09-21"))
+        self.assertEqual(self.decision()["status"], "setup")
+        self.assertEqual(training.dashboard(self.conn, self.today)["running"]["week"]["target_km"], 0)
+
+    def test_legacy_running_setup_migrates_without_inventing_pace_or_losing_history(self):
+        training.save_document(self.conn, "profile", {"goal": "hyrox", "sport": "running", "weekdays": [1,3,5], "minutes": 40, "experience": "regular", "equipment": "gym", "routine": [], "strength_days": [4], "race_date": "2026-10-25"})
+        store.upsert_activity(self.conn, {"activity_id": "owned", "duration_s": 1800})
+        training.save_feedback(self.conn, {"activity_id": "owned", "rpe": 4, "soreness": 1, "notes": "keep this"})
+        store.upsert_day(self.conn, {"date": self.today, "sleep_seconds": 27000})
+        self.conn.close()
+        self.conn = store.connect_db(Path(self.folder.name) / "history.db")
+        self.addCleanup(self.conn.close)
+        result = training.dashboard(self.conn, self.today)
+        self.assertEqual(result["profile"]["weekdays"], [1,3,5])
+        self.assertNotIn("strength_days", result["profile"])
+        self.assertIsNone(result["profile"]["easy_pace_s_per_km"])
+        self.assertIsNone(result["profile"]["weekly_km"])
+        self.assertEqual(result["activities"][0]["feedback"]["notes"], "keep this")
+        self.assertEqual(result["recovery"]["sleep_hours"], 7.5)
 
     def test_native_calendar_failure_retains_previous_schedule(self):
         previous = {"checked_at": "2000-01-01", "last_success_at": "2000-01-01", "workouts": [{"id": "1", "date": self.today, "name": "Saved workout"}]}
