@@ -829,9 +829,10 @@ function report(kind) {
       return `<a class="report-item" href="#metric/${id}/overview" style="--accent:${metricColor(def, s)}"><span class="report-number">0${i + 1}</span><div><h2>${esc(def.title)}</h2><div class="report-value">${esc(s.value)} <small>${esc(s.unit)}</small></div><p>${esc(s.sub)}</p><span class="stamp">${esc(s.date ? dateLabel(s.date) : "Not recorded")}</span></div></a>`;
     })
     .join("");
-  let session = trainingData?.profile
-    ? "Check tomorrow's updated running decision in Train."
-    : "Open Train to set up your running week.";
+  let session =
+    trainingData?.profile || trainingData?.imported_plan
+      ? "Check tomorrow's updated running decision in Train."
+      : "Open Train to set up your running week.";
   let heading = morning ? "Today’s run" : "Tomorrow’s running intention";
   if (morning && trainingData?.recommendation)
     session =

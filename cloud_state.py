@@ -24,6 +24,7 @@ from urllib.request import Request, urlopen
 import activity_detail
 import store
 import training
+import imported_plan
 
 ROOT = Path(__file__).resolve().parent
 STATE_PATH = "cirqa/state-v1.json.gz"
@@ -239,6 +240,7 @@ def update_training(kind, payload, today):
         "profile": training.save_profile,
         "feedback": training.save_feedback,
         "checkin": lambda conn, data: training.save_checkin(conn, data, today),
+        "plan": lambda conn, data: imported_plan.update(conn, data, today),
     }
     if kind not in actions:
         raise ValueError("Unsupported training update.")

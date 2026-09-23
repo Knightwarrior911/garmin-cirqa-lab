@@ -1220,3 +1220,204 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+.session-metrics.has-ranges {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.session-metrics.has-ranges strong {
+  font-size: clamp(21px, 3vw, 29px);
+  overflow-wrap: anywhere;
+}
+.session-metrics.has-ranges small {
+  line-height: 1.5;
+}
+.original-plan {
+  border: 1px solid #41532c;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 20px;
+}
+.original-plan > summary {
+  color: var(--lime);
+  line-height: 1.5;
+}
+.original-plan .board-session {
+  border: 0;
+  padding-bottom: 0;
+}
+.board-week {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 16px 0;
+}
+.board-week > summary {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.board-week > summary small {
+  display: block;
+  color: var(--lime);
+  margin: 6px 0 0 18px;
+  font-size: 11px;
+}
+.board-session {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.board-session:last-child {
+  border-bottom: 0;
+}
+.board-session-heading {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.board-session-heading h3 {
+  font-size: 17px;
+}
+.board-status {
+  flex-shrink: 0;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #26312a;
+  color: #b7d5a6;
+  font-size: 10px;
+}
+.board-session.is-complete .board-status {
+  color: var(--lime);
+}
+.board-prescription {
+  font-weight: 650;
+  color: #e6eddf;
+  margin-top: 12px;
+  font-size: 14px;
+}
+.board-targets {
+  color: var(--blue);
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 10px 0;
+  font-variant-numeric: tabular-nums;
+}
+.board-step-details {
+  margin: 14px 0;
+}
+.board-steps {
+  padding-left: 22px;
+  margin: 16px 0;
+}
+.board-steps li {
+  margin: 16px 0;
+  line-height: 1.6;
+  font-size: 12px;
+}
+.board-steps li > span {
+  display: block;
+  color: var(--lime);
+}
+.board-steps li > p {
+  margin-top: 5px;
+}
+.board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 10px;
+}
+.board-actions .primary {
+  background: var(--lime);
+}
+.board-date {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.board-date label {
+  flex: 1;
+  margin: 0;
+}
+.board-date input {
+  min-width: 0;
+}
+.board-date + p {
+  margin-top: 8px;
+  font-size: 10px;
+}
+.board-guide {
+  padding: 24px 0;
+}
+.board-guide h3 {
+  margin: 20px 0 10px;
+  font-size: 18px;
+}
+.board-guide > p {
+  font-size: 13px;
+  margin: 8px 0;
+}
+.board-guide details {
+  margin-top: 20px;
+}
+#board-week-section {
+  margin-bottom: 20px;
+}
+#board-week-note {
+  margin-top: 12px;
+  line-height: 1.7;
+}
+#guide-clock.manual-step {
+  font-size: clamp(30px, 8vw, 54px);
+  letter-spacing: -1px;
+}
+#guide-duration-options {
+  background: var(--paper);
+  padding: 15px;
+  border-radius: 12px;
+  margin-top: 15px;
+}
+#guide-duration-options label {
+  margin-bottom: 10px;
+}
+#guide-duration-error {
+  margin-top: 10px;
+  color: #ffcd8d;
+}
+#plan-complete-dialog > p {
+  margin: 12px 0;
+}
+#today-plan-link {
+  width: 100%;
+  margin-top: 12px;
+  color: var(--lime);
+}
+@media (max-width: 480px) {
+  .board-week {
+    padding: 14px;
+  }
+  .board-session-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .board-date {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .board-date button {
+    align-self: flex-start;
+  }
+  .board-session-heading h3 {
+    font-size: 16px;
+  }
+  .board-targets {
+    font-size: 12px;
+  }
+  .steps strong span {
+    white-space: normal;
+    min-width: 62px;
+    text-align: right;
+  }
+}

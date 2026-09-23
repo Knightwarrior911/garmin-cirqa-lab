@@ -41,7 +41,7 @@ class CloudAccessTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 401)
                 self.assertEqual(response.headers["Cache-Control"], "private, no-store")
             self.assertEqual(self.client.get("/", base_url=self.root).location, "/login")
-            for kind in ("profile", "feedback", "checkin"):
+            for kind in ("profile", "feedback", "checkin", "plan"):
                 response = self.client.post("/api/training/" + kind, base_url=self.root, json={}, headers={"Origin": self.root, "X-CIRQA-Request": "1"})
                 self.assertEqual(response.status_code, 401)
 
@@ -65,9 +65,29 @@ class CloudAccessTests(unittest.TestCase):
                 self.assertEqual(self.client.post("/api/sync", base_url=self.root, headers=headers).status_code, 403)
             self.assertEqual(self.client.get("/api/cron", base_url=self.root).status_code, 401)
         with patch.object(cloud_state, "load_state", side_effect=AssertionError("Must not access storage")):
-            for kind in ("profile", "feedback", "checkin"):
+            for kind in ("profile", "feedback", "checkin", "plan"):
                 response = self.client.post("/api/training/" + kind, base_url=self.root, json={}, headers={"Origin": "https://other.example", "X-CIRQA-Request": "1"})
                 self.assertEqual(response.status_code, 403)
+
+    def test_large_private_plan_import_round_trips_without_expanding_other_body_limits(self):
+        from test_imported_plan import sample_plan
+        self.sign_in()
+        with tempfile.TemporaryDirectory() as folder:
+            conn = store.connect_db(Path(folder) / "plan.db")
+            state = {"schema": 1, "database": cloud_state.database_backup(conn), "tokens": {}, "lease": None}
+            conn.close()
+        plan = sample_plan()
+        plan["notes"] = ["Synthetic explanatory note " * 40 for _ in range(6)]
+        with patch.object(cloud_state, "load_state", return_value=(state, '"version"')), patch.object(cloud_state, "save_state"):
+            headers = {"Origin": self.root, "X-CIRQA-Request": "1"}
+            response = self.client.post("/api/training/plan", base_url=self.root, json={"action": "install", "plan": plan}, headers=headers)
+            self.assertEqual(response.status_code, 200)
+            restored = self.client.get("/api/training", base_url=self.root).get_json()
+            self.assertEqual(restored["imported_plan"]["plan"], plan)
+            oversized_profile = self.client.post("/api/training/profile", base_url=self.root, json={"padding": "x" * 5000}, headers=headers)
+            self.assertEqual(oversized_profile.status_code, 413)
+            oversized_plan = self.client.post("/api/training/plan", base_url=self.root, json={"padding": "x" * 262145}, headers=headers)
+            self.assertEqual(oversized_plan.status_code, 413)
 
     def test_snapshot_response_contains_readings_not_private_tokens(self):
         with tempfile.TemporaryDirectory() as folder:

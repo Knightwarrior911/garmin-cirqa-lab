@@ -34,7 +34,7 @@ Retain native readiness factor ratings, HRV baseline, Body Battery samples, slee
 
 The account capability audit returned no usable dated running-tolerance, race-prediction, endurance/hill-score or lactate-threshold record. Running economy was not exposed through the audited client. This is an availability finding, not a universal claim about CIRQA or compatible accessories. Do not fill these gaps with modeled Garmin scores. Calendar workouts remain distinct from native watch Daily Suggested Workouts.
 
-The optional phone workout guide provides foreground timed steps for eligible planner sessions, including separate controlled/easy repeat segments. Pause/resume, next, reset and finish do not record an activity or control CIRQA. Each step waits for manual advancement; no background cues or live sensor data are promised. A blocked recommendation offers no guide.
+The optional phone workout guide handles timed, distance and manual steps, including separate work/recovery segments. Fixed durations count down; distance steps require recorded distance and manual advancement. Unknown durations stay unknown, with an optional owner-selected timer for manual/ranged steps. Pause/resume, next, reset and finish neither record an activity nor mark a plan complete. No background cues, distance measurement or live sensor data are promised. A blocked recommendation offers no guide.
 
 ## Training workspace
 
@@ -42,7 +42,7 @@ The optional phone workout guide provides foreground timed steps for eligible pl
 
 Optional effort (0–10), post-session soreness and notes belong to an activity and survive Garmin refresh. Running days, time budget, recent experience, surface, race date and nullable easy/tempo/weekly-distance benchmarks are explicit inputs. The date starts at the owner's stated 25 October 2026 but nothing saves automatically. Daily fatigue/soreness, pain and illness expire with the day. A single "I feel good" action explicitly means all four symptoms are absent; silence is never a symptom answer.
 
-Policy 3 is explainable running guidance, not a clinical assessment, validated recovery model or Garmin Daily Suggested Workouts. Pain/illness, high fatigue/soreness, non-running days, a meaningful run already recorded today, stale readiness or scheduled native work can block a run. Walking alone must not. Readiness must be from today, no more than 12 hours old and not future-dated.
+Without an imported prescription, Policy 3 is explainable running guidance, not a clinical assessment, validated recovery model or Garmin Daily Suggested Workouts. Pain/illness, high fatigue/soreness, non-running days, a meaningful run already recorded today, stale readiness or scheduled native work can block a run. Walking alone must not. Readiness must be from today, no more than 12 hours old and not future-dated.
 
 Today's run combines recovery inputs with the Monday–Sunday recorded week: distance coverage, runs, identifiable quality work and remaining known volume. A prior quality run this week, yesterday's run, recent strength/HIIT, missing sleep, unbalanced HRV, elevated recovery/stress or incomplete distance can remove quality/long work. Low readiness, poor sleep, low Body Battery or moderate symptoms shorten the session to recovery effort. Ladder is never reprogrammed by this app.
 
@@ -55,3 +55,11 @@ All running volume is kilometres. Positive-duration treadmill records with zero 
 Legacy running setups migrate once without guessing new benchmarks. Obsolete non-running planner setups require explicit running setup; native activities, wellness readings and owner feedback remain preserved. No compatibility strength/equipment/routine controls or alternate mixed planner remain.
 
 Garmin calendar workouts and plan availability are checked once daily across the current and next calendar month. They are not verified watch Daily Suggested Workouts. Failed checks preserve earlier schedules with an explicit error and timestamp; an empty calendar is not evidence that the watch has no suggestion.
+
+## Private prescribed plans
+
+An owner-imported plan is private data, not a public code fixture. Preserve its original week boundaries, every session, ranges, repeat/rest structure, race-week entries and source notes. Unknown dates, station choices, warm-ups and recovery durations are not silently invented. The full plan is reachable from **My plan**; the current plan week sits ahead of the separate Monday–Sunday native mileage.
+
+An unassigned entry requires explicit selection for Today or a date within its own week. Do not automatically queue consecutive hard sessions. The saved prescription takes priority over generic weekly-volume/quality quotas and generic pre-race rest, while symptoms, freshness, low recovery and recent demanding work still inform today's decision. Show the unchanged original beside any blocked or reduced alternative. Source HR zones/max HR are not validated measurements, and multiple demanding sessions carry an explicit load caution.
+
+Progress is owner-confirmed, optionally linked to one existing in-week Garmin activity. It never manufactures mileage or native activity load. Completion can be reopened; guide finish is not completion. Concurrent cloud sync/update conflicts retain the owner's last saved state rather than overwriting it. Existing generic profiles and all native history remain intact.

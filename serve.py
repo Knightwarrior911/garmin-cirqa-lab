@@ -15,6 +15,7 @@ from urllib.parse import urlparse, parse_qs
 import store
 import activity_detail
 import training
+import imported_plan
 
 ROOT = Path(__file__).parent
 COOLDOWN = 30 * 60
@@ -199,14 +200,16 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/training/profile": training.save_profile,
                 "/api/training/feedback": training.save_feedback,
                 "/api/training/checkin": lambda conn, data: training.save_checkin(conn, data, date.today().isoformat()),
+                "/api/training/plan": lambda conn, data: imported_plan.update(conn, data, date.today().isoformat()),
             }
             if self.path not in actions:
                 self.send_json({"ok": False, "error": "Not found"}, 404)
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= 4096:
-                    raise ValueError("Send a JSON object no larger than 4096 bytes.")
+                limit = 262144 if self.path == "/api/training/plan" else 4096
+                if not 0 < size <= limit:
+                    raise ValueError(f"Send a JSON object no larger than {limit} bytes.")
                 if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
                     raise ValueError("Send a JSON object.")
                 payload = json.loads(self.rfile.read(size))

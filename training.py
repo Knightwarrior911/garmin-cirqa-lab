@@ -505,13 +505,16 @@ def dashboard(conn, today_iso, period=7, now_local=None):
     native = {"checked_at": None, "last_success_at": None, "range_start": None, "range_end": None, "error": None, "workouts": [], "plans_count": None}
     native.update(document(conn, "native_workouts") or {})
     running = running_context(profile, activities, today)
-    decision = recommendation(profile, checkin, today, days, activities, native, now_local, running)
+    import imported_plan
+    saved_plan = imported_plan.context(conn, today_iso)
+    decision = imported_plan.apply(saved_plan, running, checkin, today, days, activities, native, now_local) if saved_plan else recommendation(profile, checkin, today, days, activities, native, now_local, running)
     for planned in running["weekly_plan"]:
         if planned["date"] == today_iso and planned["kind"] != "completed":
             planned.update(kind=decision["kind"], title=decision["title"], detail=decision["target"])
     recovery = next((d for d in days if d["date"] == today_iso), {})
     return {
         "ok": True, "today": today_iso, "period": period, "profile": profile, "checkin": checkin,
+        "imported_plan": saved_plan,
         "recovery": {"date": recovery.get("date"), "readiness": recovery.get("training_readiness"),
                      "readiness_updated_at": recovery.get("readiness_updated_at"),
                      "sleep_hours": recovery["sleep_seconds"] / 3600 if finite(recovery.get("sleep_seconds")) else None,

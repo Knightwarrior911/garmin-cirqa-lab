@@ -278,8 +278,10 @@ def training_data():
 
 @app.post("/api/training/<kind>")
 def training_update(kind):
-    if kind not in ("profile", "feedback", "checkin"):
+    if kind not in ("profile", "feedback", "checkin", "plan"):
         return jsonify(ok=False, error="Not found."), 404
+    if kind == "plan":
+        request.max_content_length = 262144
     if not request.is_json:
         return jsonify(ok=False, error="Send a JSON object."), 400
     payload = request.get_json(silent=True)

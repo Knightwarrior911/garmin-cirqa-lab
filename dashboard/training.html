@@ -31,6 +31,9 @@
           ><button type="button" data-open="profile-dialog" class="quiet">
             Edit plan
           </button>
+          <button id="board-nav" type="button" class="quiet" hidden>
+            My plan
+          </button>
         </div>
       </header>
       <nav class="app-nav" aria-label="Main navigation">
@@ -153,6 +156,13 @@
               >
                 Edit running plan
               </button>
+              <button id="today-plan-link" type="button" class="quiet" hidden>
+                View saved plan
+              </button>
+              <details id="original-plan" class="original-plan" hidden>
+                <summary>Original planned session · unchanged</summary>
+                <div id="original-plan-content"></div>
+              </details>
               <div id="quick-checkin" class="quick-checkin">
                 <p id="checkin-summary"></p>
                 <button type="button" id="feeling-good">
@@ -192,9 +202,14 @@
           </div>
         </div>
         <div id="week-panel" role="tabpanel" aria-labelledby="week-tab" hidden>
+          <section id="board-week-section" class="card" hidden>
+            <h2 id="board-week-title">Your plan week</h2>
+            <p id="board-week-note" class="small muted"></p>
+            <div id="board-week-sessions"></div>
+          </section>
           <section class="card">
             <div class="sectionhead">
-              <h2>Your running week</h2>
+              <h2 id="week-heading">Your running week</h2>
               <button type="button" data-open="profile-dialog">
                 Edit days
               </button>
@@ -326,6 +341,21 @@
       <p id="guide-target" class="guide-target"></p>
       <p id="guide-detail"></p>
       <p id="guide-state" class="muted small" role="status"></p>
+      <div id="guide-duration-options" hidden>
+        <label
+          >Optional timer (minutes)
+          <input
+            id="guide-duration"
+            type="number"
+            step="any"
+            min="0.1"
+            max="240"
+            inputmode="decimal"
+          />
+        </label>
+        <button id="guide-apply-duration" type="button">Set my timer</button>
+        <p id="guide-duration-error" class="small" role="alert"></p>
+      </div>
       <div class="guide-controls">
         <button type="button" id="guide-toggle" class="primary">Start</button
         ><button type="button" id="guide-next">Next step</button
@@ -335,6 +365,37 @@
         Each step stops at zero. Tap Next when ready. Stop for pain, illness or
         loss of form; the timer is not clearance to continue.
       </p>
+    </dialog>
+    <dialog id="plan-complete-dialog" aria-labelledby="plan-complete-title">
+      <div class="dialog-head">
+        <h2 id="plan-complete-title">Mark session complete</h2>
+        <button type="button" data-close aria-label="Close completion">
+          ×
+        </button>
+      </div>
+      <p id="plan-complete-session"></p>
+      <p class="small muted">
+        This saves your confirmation only. It does not create a Garmin recording
+        or add running kilometres. Finishing the timer does not mark the
+        original workout complete.
+      </p>
+      <form id="plan-complete-form">
+        <fieldset>
+          <label
+            >Link an actual recording (optional)<select
+              id="plan-complete-activity"
+            >
+              <option value="">
+                No recording linked · owner-confirmed only
+              </option>
+            </select></label
+          >
+          <p id="plan-complete-error" class="form-result" role="alert"></p>
+          <button type="submit" class="primary">
+            Confirm completed session
+          </button>
+        </fieldset>
+      </form>
     </dialog>
     <dialog id="profile-dialog" aria-labelledby="profile-title">
       <div class="dialog-head">
